@@ -5,11 +5,14 @@
 
 #include <d3d9.h>
 #include <tchar.h>
+#include <dwmapi.h>
 #include "../imgui/imgui.h"
 #include "../imgui/imgui_impl_dx9.h"
 #include "../imgui/imgui_impl_win32.h"
 #include "../imgui/imgui_internal.h"
 
+#include "cse.h"
+#include "graphics_spec.h"
 
 struct Window {
   std::shared_ptr<WindowProcess> process;
@@ -70,11 +73,10 @@ static bool CreateDeviceD3D(HWND hWnd)
   ZeroMemory(&mainWindow.d3dPP, sizeof(mainWindow.d3dPP));
   mainWindow.d3dPP.Windowed = TRUE;
   mainWindow.d3dPP.SwapEffect = D3DSWAPEFFECT_DISCARD;
-  mainWindow.d3dPP.BackBufferFormat = D3DFMT_UNKNOWN; // Need to use an explicit format with alpha if needing per-pixel alpha composition.
+  mainWindow.d3dPP.BackBufferFormat = D3DFMT_UNKNOWN;
   mainWindow.d3dPP.EnableAutoDepthStencil = TRUE;
   mainWindow.d3dPP.AutoDepthStencilFormat = D3DFMT_D16;
-  mainWindow.d3dPP.PresentationInterval = D3DPRESENT_INTERVAL_ONE;           // Present with vsync
-  //mainWindow.d3dPP.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;   // Present without vsync, maximum unthrottled framerate
+  mainWindow.d3dPP.PresentationInterval = D3DPRESENT_INTERVAL_ONE; // Present with vsync
   if (mainWindow.pd3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &mainWindow.d3dPP, &mainWindow.pd3dDevice) < 0)
     return false;
 
@@ -132,9 +134,13 @@ void graphics::loadGraphics()
   // Create ImGui context
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
-  ImGuiIO &io = ImGui::GetIO(); (void)io;
+  ImGuiIO &io = ImGui::GetIO();
+  std::string iniFilePath = (cse::getUserFilesPath() / "imgui.ini").string();
+  io.IniFilename = _strdup(iniFilePath.c_str()); // not freed but must be kept until imgui is destroyed (the whole program's lifetime)
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
   io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+  io.ConfigViewportsNoTaskBarIcon = true;
+  //ImGui::GetWindowViewport()->Flags |= ImGuiViewportFlags_NoTaskBarIcon;
 
   ImGui::StyleColorsDark();
 
@@ -142,7 +148,6 @@ void graphics::loadGraphics()
   style.WindowPadding.x = 0;
   style.WindowPadding.y = 0;
   style.WindowRounding = 0.0f;
-  style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
   ImGui_ImplWin32_Init(mainWindow.wnd);
   ImGui_ImplDX9_Init(mainWindow.pd3dDevice);
@@ -177,8 +182,6 @@ void graphics::render()
   while (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE)) {
     TranslateMessage(&msg);
     DispatchMessage(&msg);
-    //if (msg.message == WM_QUIT)
-    //  exit(0);
   }
 
   // begin frame
@@ -189,10 +192,8 @@ void graphics::render()
   // draw frame
   for (Window &window : activeWindows) {
     if (window.process->isVisible()) {
+      window_helper::prepareAlwaysOnTop();
       bool visible = window.process->beginWindow();
-      //void *platformData = ImGui::GetWindowViewport()->PlatformUserData; // actual type ImGui_ImplGlfw_ViewportData
-      //if (platformData)
-      //  window.mainWindow.wnd = *(GLFWwindow **)platformData;
       if(visible)
         window.process->render();
       ImGui::End();
@@ -224,24 +225,17 @@ void graphics::render()
 bool graphics::shouldDispose()
 {
   return activeWindows.empty();
-  //for (Window &window : activeWindows) {
-  //  if (window.process->isVisible())
-  //    return false;
-  //}
-  //return true;
 }
 
 void graphics::createWindow(const std::shared_ptr<WindowProcess> &process)
 {
   for (Window &window : activeWindows) {
-    if (window.process->getName() == process->getName()) {
-      // TODO focus window?
+    if (window.process->getName() == process->getName())
       return;
-    }
   }
   Window win{ process };
   activeWindows.push_back(std::move(win));
-  cse::log("Created a window for " + process->getName());
+  cse::log("Created window " + process->getName());
 }
 
 void graphics::closeAllWindows()
@@ -252,9 +246,25 @@ void graphics::closeAllWindows()
   activeWindows.clear();
 }
 
-void cse::window_helper::prepareAlwaysOnTop()
+namespace graphics::window_helper {
+
+ImplDetails implDetails;
+
+void prepareTransparent(bool *cond)
+{
+  if (true)
+    return; // disabled, produces strange behaviors with transparency...
+  if (*cond) {
+    implDetails.nextImGuiViewportTransparent = true;
+    *cond = false;
+  }
+}
+
+void prepareAlwaysOnTop()
 {
   ImGuiWindowClass activeClass;
   activeClass.ViewportFlagsOverrideSet = ImGuiViewportFlags_TopMost;
   ImGui::SetNextWindowClass(&activeClass);
+}
+
 }

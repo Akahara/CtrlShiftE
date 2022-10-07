@@ -2,7 +2,12 @@
 
 #include "../cse.h"
 
-class IOTRecordedCommands : public IOTGenerator {
+namespace cse::extensions {
+
+class RecordedCommands : public CSEExtension {
 public:
-  void getCommands(const std::string &text, std::vector<IOTCommand *> &out_commands) override;
+  RecordedCommands();
+  ~RecordedCommands();
 };
+
+}

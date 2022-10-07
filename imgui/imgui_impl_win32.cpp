@@ -858,7 +858,10 @@ static void ImGui_ImplWin32_GetWin32StyleFromViewportFlags(ImGuiViewportFlags fl
     else
         *out_style = WS_OVERLAPPEDWINDOW;
 
+WONDER_EDIT(
+    if(true) /* for some reason the NoTaskBarIcon flag isn't kept by imgui */,
     if (flags & ImGuiViewportFlags_NoTaskBarIcon)
+)
         *out_ex_style = WS_EX_TOOLWINDOW;
     else
         *out_ex_style = WS_EX_APPWINDOW;
@@ -866,6 +869,8 @@ static void ImGui_ImplWin32_GetWin32StyleFromViewportFlags(ImGuiViewportFlags fl
     if (flags & ImGuiViewportFlags_TopMost)
         *out_ex_style |= WS_EX_TOPMOST;
 }
+
+#include "../cse/graphics_spec.h" // not wrapped in a WONDER_EDIT because of macro expansion order but should be
 
 static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
 {
@@ -889,6 +894,13 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     vd->HwndOwned = true;
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = viewport->PlatformHandleRaw = vd->Hwnd;
+WONDER_EDIT(
+    /* dirty fix to enable alpha compositing on multi viewport windows */
+    if(graphics::window_helper::implDetails.nextImGuiViewportTransparent)
+      ImGui_ImplWin32_EnableAlphaCompositing(vd->Hwnd);
+    graphics::window_helper::implDetails.nextImGuiViewportTransparent = false;
+,
+)
 }
 
 static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)

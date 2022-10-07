@@ -54,16 +54,25 @@
     <ClCompile Include="cse\cse.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="cse\tools.cpp">
+    <ClCompile Include="cse\extensions\key_stats_recorder.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="cse\extensions\key_stats_recorder.cpp">
+    <ClCompile Include="cse\commands.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="cse\extensions\time_recorder.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="cse\extensions\recorded_commands.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="cse\extensions\color_picker.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="cse\extensions\tables.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="cse\extensions\personnal_links.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -107,17 +116,45 @@
     <ClInclude Include="cse\extensions\key_stats_recorder.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="cse\extensions\time_recorder.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="cse\extensions\universal_shortcuts.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="cse\extensions\recorded_commands.h">
+    <ClInclude Include="cse\extensions\universal_shortcut.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="cse\commands.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
+    <ClInclude Include="cse\extensions\time_recorder.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="cse\extensions\recorded_commands.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="cse\extensions\color_picker.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="cse\graphics_spec.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="cse\extensions\tables.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="cse\extensions\personnal_links.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\wondertools_64.ico">
+      <Filter>Fichiers de ressources</Filter>
+    </Image>
+    <Image Include="res\wondertools_256.ico">
+      <Filter>Fichiers de ressources</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="CtrlShiftE.rc">
+      <Filter>Fichiers de ressources</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

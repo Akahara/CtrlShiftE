@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../cse.h"
+#include "../graphics.h"
 
 class DebugWindowProcess : public WindowProcess {
 private:

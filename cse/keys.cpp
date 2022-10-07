@@ -11,7 +11,8 @@
 
 static struct KeyEventListener {
   std::thread listenerThread;
-  std::vector<GlobalKeyEvent> polledEvents;
+  std::vector<GlobalKeyEvent> polledKeyEvents;
+  std::vector<GlobalButtonEvent> polledButtonEvents;
   std::mutex polledEventsMutex;
 } *globalKeyListener;
 
@@ -30,12 +31,15 @@ static bool processKey(KBDLLHOOKSTRUCT *keyEvent)
   flags |= (keyEvent->flags & LLKHF_ALTDOWN) ? KeyFlags_Option : 0;
   flags |= GetAsyncKeyState(VK_CONTROL)      ? KeyFlags_Ctrl   : 0;
   flags |= GetAsyncKeyState(VK_SHIFT)        ? KeyFlags_Shift  : 0;
-  long long eventTime = currentTimeMillis(); // cannot use keyEvent->time because it is relative to when the computed booted
-  GlobalKeyEvent ev{ keyEvent->vkCode, flags, eventTime };
+  long long eventTime = currentTimeMillis(); // cannot use keyEvent->time because it is relative to when the computer booted
+  GlobalKeyEvent ev{};
+  ev.keyCode = static_cast<char>(keyEvent->vkCode);
+  ev.keyFlags = flags;
+  ev.pressTime = eventTime;
 
   {
     std::lock_guard _lock{ globalKeyListener->polledEventsMutex };
-    globalKeyListener->polledEvents.push_back(ev);
+    globalKeyListener->polledKeyEvents.push_back(ev);
   }
 
   // return true iff the event must be suppressed
@@ -47,6 +51,21 @@ static bool processKey(KBDLLHOOKSTRUCT *keyEvent)
   return false;
 }
 
+static void processMouse(MSLLHOOKSTRUCT *mouseEvent, WPARAM eventWParam)
+{
+  long long eventTime = currentTimeMillis(); // cannot use keyEvent->time because it is relative to when the computer booted
+  GlobalButtonEvent ev{};
+  // opt: WM_[L/R]BUTTON[DOWN/UP] are 0x201..0x205
+  ev.button    = (eventWParam - WM_LBUTTONDOWN) / 2;
+  ev.isPressed = eventWParam & 1;
+  ev.pressTime = eventTime;
+
+  {
+    std::lock_guard _lock{ globalKeyListener->polledEventsMutex };
+    globalKeyListener->polledButtonEvents.push_back(ev);
+  }
+}
+
 static LRESULT CALLBACK globalKeyboardHookProc(int code, WPARAM wParam, LPARAM lParam)
 {
   if(code < 0)
@@ -56,12 +75,22 @@ static LRESULT CALLBACK globalKeyboardHookProc(int code, WPARAM wParam, LPARAM l
   return CallNextHookEx(0, code, wParam, lParam);
 }
 
+static LRESULT CALLBACK globalMouseHookProc(int code, WPARAM wParam, LPARAM lParam)
+{
+  if (code < 0)
+    return CallNextHookEx(0, code, wParam, lParam);
+  if (wParam == WM_LBUTTONDOWN || wParam == WM_LBUTTONUP || wParam == WM_RBUTTONDOWN || wParam == WM_RBUTTONUP)
+    processMouse((MSLLHOOKSTRUCT *)lParam, wParam);
+  return CallNextHookEx(0, code, wParam, lParam);
+}
+
 static void globalKeyListenerEntryPoint()
 {
   cse::log("Listening for global keypresses");
   // WH_KEYBOARD cannot be caught because the event is only propagated to the active window
   // otherwise there would be no need for another thread
   SetWindowsHookExA(WH_KEYBOARD_LL, globalKeyboardHookProc, NULL, NULL);
+  SetWindowsHookExA(WH_MOUSE_LL, globalMouseHookProc, NULL, NULL);
   int errorFlag;
   MSG msg;
   while ((errorFlag = GetMessage(&msg, NULL, 0, 0)) != 0) {
@@ -109,17 +138,24 @@ void unregisterGlobalHook()
 
 void pollEvents()
 {
-  globalKeyListener->polledEventsMutex.lock();
+  if (!globalKeyListener->polledEventsMutex.try_lock()) {
+    cse::log(">nolock");
+    return; // if the mutex was busy return and try again on the next app frame (1/60th of a second does not matter much)
+  }
   // take ownership of the events list to release the mutex asap
   // the list is also cleared for immediate reuse
-  std::vector<GlobalKeyEvent> events = std::move(globalKeyListener->polledEvents);
+  std::vector<GlobalKeyEvent> keyEvents = std::move(globalKeyListener->polledKeyEvents);
+  std::vector<GlobalButtonEvent> buttonEvents = std::move(globalKeyListener->polledButtonEvents);
   globalKeyListener->polledEventsMutex.unlock();
 
-  for (GlobalKeyEvent &ev : events) {
+  for (GlobalKeyEvent &ev : keyEvents) {
     for (auto &listener : globalKeyListeners)
       listener->onKeyPressed(ev);
   }
-
+  for (GlobalButtonEvent &ev : buttonEvents) {
+    for (auto &listener : globalKeyListeners)
+      listener->onButtonPressed(ev);
+  }
 }
 
 }

@@ -4,56 +4,10 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <filesystem>
+#include <thread>
 
-#include "../imgui/imgui.h"
-
-class WindowProcess {
-protected:
-  std::string m_windowName;
-  bool m_isVisible = true;
-
-public:
-  WindowProcess(std::string_view windowName);
-  virtual ~WindowProcess() = default;
-
-  virtual bool beginWindow();
-  virtual void render() = 0;
-
-  const std::string &getName() const { return m_windowName; }
-  bool isVisible() const { return m_isVisible; }
-  void setVisible(bool visible) { m_isVisible = visible; }
-};
-
-class IOTCommand {
-protected:
-  std::string  m_text;
-  float        m_relevanceScore;
-public:
-  IOTCommand(const std::string &text, float relevanceScore)
-    : m_text(text), m_relevanceScore(relevanceScore) { }
-  virtual ~IOTCommand() = default;
-  
-  const std::string &getText() const { return m_text; }
-  float getRelevanceScore() const { return m_relevanceScore; }
-
-  virtual void runCommand() = 0;
-};
-
-class NormalCommand : public IOTCommand {
-private:
-  std::function<void()> m_callback;
-public:
-  NormalCommand(const std::string &text, float relevanceScore, const std::function<void()> &callback)
-    : IOTCommand(text, relevanceScore), m_callback(callback) { }
-  void runCommand() override { m_callback(); }
-};
-
-class IOTGenerator {
-public:
-  virtual ~IOTGenerator() = default;
-
-  virtual void getCommands(const std::string &text, std::vector<IOTCommand*> &out_commands) = 0;
-};
+#include "commands.h"
 
 typedef unsigned char KeyFlags;
 
@@ -70,6 +24,12 @@ struct GlobalKeyEvent {
   long long pressTime;
 };
 
+struct GlobalButtonEvent {
+  int button;
+  bool isPressed;
+  long long pressTime;
+};
+
 struct GlobalKeystroke {
   char keyCode;
   KeyFlags keyFlags;
@@ -82,6 +42,7 @@ public:
   virtual ~GlobalKeyListener() = default;
 
   virtual void onKeyPressed(GlobalKeyEvent ev) = 0;
+  virtual void onButtonPressed(GlobalButtonEvent ev) = 0;
 };
 
 namespace cse {
@@ -90,15 +51,9 @@ void log(std::string_view line);
 void logErr(std::string_view line);
 void logInfo(std::string_view line);
 
-void addIOTGenerator(const std::shared_ptr<IOTGenerator> &generator);
+void addCommand(Command &&command);
 
-const std::string &getUserFilesPath();
-
-namespace window_helper {
-
-void prepareAlwaysOnTop();
-
-}
+const std::filesystem::path &getUserFilesPath();
 
 namespace keys {
 
@@ -107,9 +62,30 @@ void addGlobalKeyListener(const std::shared_ptr<GlobalKeyListener> &listener);
 
 }
 
-namespace tools {
+namespace extensions {
 
-size_t levenshteinDistance(std::string_view source, std::string_view target);
+/*
+ * CSE extensions are instanciated after core functions
+ * and are destroyed before theim. It is safe to put
+ * initialization and cleanup code in constructors/destructors
+ * (RAII)
+ */
+class CSEExtension {
+public:
+  virtual ~CSEExtension() {}
+};
+
+static Executor runLater(Executor executor)
+{
+  return [executor](const auto &args) {
+    // run in separate thread to avoid stalling the main thread
+    // until the command starts
+    std::thread _launcher([executor, &args]() {
+      executor(args);
+    });
+    _launcher.detach();
+  };
+}
 
 }
 

@@ -7,8 +7,7 @@
 
 namespace cse {
 
-const std::vector<std::shared_ptr<IOTGenerator>> &getIOTGenerators();
-void clearIOTGenerators();
+std::vector<Command> &getCommands();
 
 
 namespace keys {

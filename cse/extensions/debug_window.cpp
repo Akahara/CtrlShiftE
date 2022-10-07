@@ -7,13 +7,13 @@
 static std::vector<const char*> logLines;
 
 DebugWindowProcess::DebugWindowProcess()
-  : WindowProcess("Logs")
+  : WindowProcess("CtrlShiftE.Logs")
 {
 }
 
 bool DebugWindowProcess::beginWindow()
 {
-  cse::window_helper::prepareAlwaysOnTop();
+  graphics::window_helper::prepareAlwaysOnTop();
   return WindowProcess::beginWindow();
 }
 
