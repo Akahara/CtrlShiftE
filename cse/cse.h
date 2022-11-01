@@ -28,6 +28,7 @@ struct GlobalButtonEvent {
   int button;
   bool isPressed;
   long long pressTime;
+  long cursorX, cursorY;
 };
 
 struct GlobalKeystroke {
@@ -59,6 +60,10 @@ namespace keys {
 
 void addGlobalySuppressedKeystroke(GlobalKeystroke keystroke);
 void addGlobalKeyListener(const std::shared_ptr<GlobalKeyListener> &listener);
+void captureNextClick(std::function<void(const GlobalButtonEvent&)> &&callback);
+
+long getScreenCursorX();
+long getScreenCursorY();
 
 }
 
