@@ -3,6 +3,8 @@
 
 #include <filesystem>
 
+#include <Windows.h>
+
 #include "extensions/debug_window.h"
 
 namespace fs = std::filesystem;
@@ -70,4 +72,13 @@ bool WindowProcess::beginWindow()
 bool GlobalKeystroke::match(const GlobalKeyEvent &ev) const
 {
   return keyCode == ev.keyCode && (keyFlags & ev.keyFlags) == keyFlags;
+}
+
+namespace cse::extensions {
+
+void openWebPage(const char *url)
+{
+  ShellExecuteA(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
+}
+
 }

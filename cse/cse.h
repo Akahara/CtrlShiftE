@@ -92,6 +92,16 @@ static Executor runLater(Executor executor)
   };
 }
 
+/*
+ * Utility function that opens a web browser to the given url.
+ * Beware! This function is fundamentally unsafe when used with
+ * unsanitized user input, it may open files or run executables
+ * if the url looks like a path. 
+ * url must start with http:// or https://, otherwise behavior
+ * is undefined.
+ */
+void openWebPage(const char *url);
+
 }
 
 }

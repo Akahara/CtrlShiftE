@@ -33,15 +33,26 @@ static void addShellCommand(const char *cseCommand, const char *tooltip, const c
   });
 }
 
-static void addGoogleSearchCommand()
+static void addGoogleSearchCommands()
 {
   cse::addCommand({
     "g",
     "google search",
-    { new CommandTextPart("url") },
+    { new CommandTextPart("search") },
     runLater([](const auto &args) {
       std::string url = "https://www.google.com/search?q=";
       url += args[0];
+      ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    })
+  });
+  cse::addCommand({
+    "g!",
+    "web search w/ immediate url",
+    { new CommandTextPart("url") },
+    runLater([](const auto &args) {
+      std::string url{ args[0] };
+      if (!url.starts_with("http"))
+        url = "https://" + url;
       ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
     })
   });
@@ -53,7 +64,7 @@ RecordedCommands::RecordedCommands()
   addRawCommand("note",   "opens Notepad++", "C:\\Program Files (x86)\\Notepad++\\notepad++.exe");
   addShellCommand("python", "python shell",     "C:\\Windows\\System32\\cmd.exe", "/c python");
   addShellCommand("js",     "javascript shell", "C:\\Windows\\System32\\cmd.exe", "/c node");
-  addGoogleSearchCommand();
+  addGoogleSearchCommands();
 }
 
 RecordedCommands::~RecordedCommands()

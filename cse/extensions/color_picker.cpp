@@ -87,7 +87,7 @@ public:
     }
 
     ImVec2 c = ImGui::GetCursorScreenPos();
-    int s = (ImGui::GetWindowWidth() - 10) / CAPTURE_WIDTH;
+    int s = (int) ((ImGui::GetWindowWidth() - 10) / CAPTURE_WIDTH);
     for (int y = 0; y < CAPTURE_HEIGHT; y++) {
       for (int x = 0; x < CAPTURE_WIDTH; x++) {
         int rgba = m_bitmapBuffer[x + y * CAPTURE_WIDTH];

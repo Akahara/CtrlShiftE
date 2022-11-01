@@ -23,11 +23,50 @@ public:
   }
 };
 
+class GLSLTableWindow : public WindowProcess {
+public:
+  GLSLTableWindow()
+    : WindowProcess("GLSL table")
+  {
+  }
+
+  void render() override
+  {
+    ImGui::Text("mix(x, y, a)");
+    ImGui::Text("clamp(x, min, max)");
+    ImGui::Text("step(e, x) := x>e");
+    ImGui::Text("smoothstep(e0, e1, x)");
+    ImGui::Text("texture(sampler2D, uv)");
+    if (ImGui::CollapsingHeader("Vertex built-ins")) {
+      ImGui::Text("in int gl_VertexID;\n"
+                  "in int gl_InstanceID;");
+      ImGui::Text("out gl_PerVertex {\n"
+                  "  vec4 gl_Position;\n"
+                  "  float gl_PointSize;\n"
+                  "  float gl_ClipDistance[];\n"
+                  "  float gl_CullDistance[];\n"
+                  "};");
+    }
+    if (ImGui::CollapsingHeader("Fragment built-ins")) {
+      ImGui::Text("in vec4 gl_FragCoord;\n"
+                  "in int gl_PrimitiveID;\n"
+                  "in int gl_SampleID;\n"
+                  "in vec2 gl_SamplePosition;");
+      ImGui::Text("out float gl_FragDepth;");
+    }
+    if (ImGui::Button("docs.gl"))
+      cse::extensions::openWebPage("http://docs.gl");
+    if (ImGui::Button("complete cheat sheet"))
+      cse::extensions::openWebPage("https://www.opengl.org/sdk/docs/reference_card/opengl45-reference-card.pdf");
+  }
+};
+
 namespace cse::extensions {
 
 Tables::Tables()
 {
   m_tables.emplace("ascii", []() { return new ASCIITableWindow; });
+  m_tables.emplace("glsl", []() { return new GLSLTableWindow; });
 
   std::vector<const char *> tableNames;
   for (const auto &[name, _] : m_tables)
