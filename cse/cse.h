@@ -19,7 +19,8 @@ enum KeyFlags_ : KeyFlags {
 };
 
 struct GlobalKeyEvent {
-  char keyCode;
+  unsigned char keyCode;
+  unsigned char scanCode;
   KeyFlags keyFlags;
   long long pressTime;
 };
@@ -32,9 +33,9 @@ struct GlobalButtonEvent {
 };
 
 struct GlobalKeystroke {
-  char keyCode;
+  unsigned char keyCode;
   KeyFlags keyFlags;
-public:
+
   bool match(const GlobalKeyEvent &ks) const;
 };
 
@@ -42,8 +43,8 @@ class GlobalKeyListener {
 public:
   virtual ~GlobalKeyListener() = default;
 
-  virtual void onKeyPressed(GlobalKeyEvent ev) = 0;
-  virtual void onButtonPressed(GlobalButtonEvent ev) = 0;
+  virtual void onKeyPressed(const GlobalKeyEvent &ev) = 0;
+  virtual void onButtonPressed(const GlobalButtonEvent &ev) = 0;
 };
 
 namespace cse {
@@ -77,7 +78,8 @@ namespace extensions {
  */
 class CSEExtension {
 public:
-  virtual ~CSEExtension() {}
+           CSEExtension() = default;
+  virtual ~CSEExtension() = default;
 };
 
 static Executor runLater(Executor executor)

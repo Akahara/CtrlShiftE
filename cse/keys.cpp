@@ -39,7 +39,8 @@ static bool processKey(KBDLLHOOKSTRUCT *keyEvent)
   flags |= GetAsyncKeyState(VK_SHIFT)        ? KeyFlags_Shift  : 0;
   long long eventTime = currentTimeMillis(); // cannot use keyEvent->time because it is relative to when the computer booted
   GlobalKeyEvent ev{};
-  ev.keyCode = static_cast<char>(keyEvent->vkCode);
+  ev.keyCode = (unsigned char)keyEvent->vkCode;
+  ev.scanCode = (unsigned char)keyEvent->scanCode;
   ev.keyFlags = flags;
   ev.pressTime = eventTime;
 
@@ -49,7 +50,6 @@ static bool processKey(KBDLLHOOKSTRUCT *keyEvent)
   }
 
   // return true iff the event must be suppressed
-
   for (GlobalKeystroke &ks : suppressedKeystrokes) {
     if (ks.match(ev))
       return true;

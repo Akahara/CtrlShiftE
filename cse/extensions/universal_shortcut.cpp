@@ -14,8 +14,8 @@ class UniversalShortcutBringer : public GlobalKeyListener {
 public:
   static constexpr GlobalKeystroke KEYSTROKE{ 'E', KeyFlags_Ctrl | KeyFlags_Shift };
 
-  void onKeyPressed(GlobalKeyEvent ev);
-  void onButtonPressed(GlobalButtonEvent ev);
+  void onKeyPressed(const GlobalKeyEvent &ev) override;
+  void onButtonPressed(const GlobalButtonEvent &ev) override;
 };
 
 class UniversalShortcutWindow : public WindowProcess {
@@ -45,13 +45,13 @@ private:
 
 
 
-void UniversalShortcutBringer::onKeyPressed(GlobalKeyEvent ev)
+void UniversalShortcutBringer::onKeyPressed(const GlobalKeyEvent &ev)
 {
   if (KEYSTROKE.match(ev))
     graphics::createWindow(std::make_shared<UniversalShortcutWindow>());
 }
 
-void UniversalShortcutBringer::onButtonPressed(GlobalButtonEvent ev)
+void UniversalShortcutBringer::onButtonPressed(const GlobalButtonEvent &ev)
 {
 }
 

@@ -11,33 +11,71 @@
 
 namespace fs = std::filesystem;
 
-enum class EventType {
-  KEY, BUTTON
+struct ClickPos {
+  int x, y;
 };
 
-struct GlobalEvent {
-  EventType type;
-  union {
-    GlobalKeyEvent key;
-    GlobalButtonEvent button;
-  } ev;
+bool operator==(const ClickPos &p1, const ClickPos &p2)
+{
+  return p1.x == p2.x && p1.y == p2.y;
+}
+
+template<>
+struct std::hash<ClickPos> {
+  size_t operator()(const ClickPos &p) const
+  {
+    // Z->N
+    size_t k1 = p.x < 0 ? -2 * p.x - 1 : 2 * p.x;
+    size_t k2 = p.y < 0 ? -2 * p.y - 1 : 2 * p.y;
+    // Cantor paring
+    return (k1 + k2) * (k1 + k2 + 1) / 2 + k2;
+  }
 };
+
+/*
+Design note: to record button presses we cannot simply have a 2d array of fixed size because
+the user may add/remove a secondary monitor at runtime, and click received from secondary
+monitors are in a larger range (maybe even negative).
+Instead 
+*/
 
 class KeyListener : public GlobalKeyListener {
 private:
-  std::array<GlobalEvent, 128> m_recordedEvents;
-  size_t                       m_currentEventCount;
-  std::ofstream                m_sessionFile;
+  constexpr static size_t RECORDED_SCANCODE_COUNT = 100;  // record only the first 100 scan codes
+  constexpr static size_t SAVE_PERIOD = 500;              // save the file every N events
+  constexpr static int    BUTTON_POSITION_THRESHOLD = 40; // do not differenciate button pressed that are less than N pixels appart
+
+  std::unordered_map<ClickPos, unsigned int> m_buttonPresses;
+  unsigned int m_keyPresses[RECORDED_SCANCODE_COUNT];
+  int          m_minButtonX, m_minButtonY, m_maxButtonX, m_maxButtonY;
+  size_t       m_currentEventCount;
+  fs::path     m_sessionFilePath;
+  long long    m_firstTime;
 public:
   KeyListener();
   ~KeyListener();
-  void onKeyPressed(GlobalKeyEvent ev) override;
-  void onButtonPressed(GlobalButtonEvent ev) override;
+  void onKeyPressed(const GlobalKeyEvent &ev) override;
+  void onButtonPressed(const GlobalButtonEvent &ev) override;
 private:
   void dumpRecordedEvents();
 };
 
+
+inline long long currentTimeMillis()
+{
+  using namespace std::chrono;
+  return duration_cast<milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
+}
+
+
 KeyListener::KeyListener()
+  : m_keyPresses(),
+  m_buttonPresses(),
+  m_currentEventCount(0),
+  m_sessionFilePath(),
+  m_minButtonX(std::numeric_limits<int>::max()), m_minButtonY(std::numeric_limits<int>::max()),
+  m_maxButtonX(std::numeric_limits<int>::min()), m_maxButtonY(std::numeric_limits<int>::min()),
+  m_firstTime(currentTimeMillis())
 {
   fs::path sessionFilesDir = cse::getUserFilesPath() / "key_records";
   fs::create_directories(sessionFilesDir);
@@ -52,18 +90,14 @@ KeyListener::KeyListener()
     << "_";
 
   size_t sessionDayIndex = 0;
-  fs::path sessionFileName;
   do {
-    sessionFileName = sessionFilesDir / sessionFileBase.str();
-    sessionFileName += std::to_string(sessionDayIndex) + ".txt";
+    m_sessionFilePath = sessionFilesDir / sessionFileBase.str();
+    m_sessionFilePath += std::to_string(sessionDayIndex) + ".csv";
     sessionDayIndex++;
-  } while (fs::exists(sessionFileName));
+  } while (fs::exists(m_sessionFilePath));
 
-  m_sessionFile = std::ofstream(sessionFileName, std::ios::binary);
-  m_currentEventCount = 0;
-
-  // write file header
-  m_sessionFile.write("v2", 2);
+  // write the file at least once
+  dumpRecordedEvents();
 }
 
 KeyListener::~KeyListener()
@@ -74,35 +108,58 @@ KeyListener::~KeyListener()
 void KeyListener::dumpRecordedEvents()
 {
   cse::logInfo("Dumping global key events");
-  for (size_t i = 0; i < m_currentEventCount; i++) {
-    GlobalEvent &wrappedEvent = m_recordedEvents[i];
-    switch (wrappedEvent.type) {
-    case EventType::KEY: {
-      GlobalKeyEvent &ev = wrappedEvent.ev.key;
-      m_sessionFile.write(&ev.keyCode, 1);
-    } break;
-    case EventType::BUTTON: {
-      GlobalButtonEvent &ev = wrappedEvent.ev.button;
-      m_sessionFile.write((char*)&ev.button, 1);
-    } break;
+  std::ofstream sessionFile{ m_sessionFilePath, std::ios::binary };
+
+  sessionFile << "v3;\n";
+
+  sessionFile << "first millis;last millis;\n";
+  sessionFile << m_firstTime << ";" << currentTimeMillis() << ";\n";
+
+  sessionFile << "presses per scancode up to;" << RECORDED_SCANCODE_COUNT << ";\n";
+  for (size_t i = 0; i < RECORDED_SCANCODE_COUNT; i++)
+    sessionFile << m_keyPresses[i] << ";";
+  sessionFile << "\n";
+
+  sessionFile << "pixels per cell;cellMinX;cellMinY;cellMaxX;cellMaxY;\n";
+  sessionFile << BUTTON_POSITION_THRESHOLD << ";" << m_minButtonX << ";" << m_minButtonY << ";" << m_maxButtonX << ";" << m_maxButtonY << ";\n";
+  sessionFile << "button press per cell;\n";
+  for (int y = m_minButtonY; y <= m_maxButtonY; y++) {
+    for (int x = m_minButtonX; x <= m_maxButtonX; x++) {
+      sessionFile << m_buttonPresses[{ x, y }] << ";";
     }
+    sessionFile << "\n";
   }
-  m_sessionFile.flush();
-  m_currentEventCount = 0;
+
+  sessionFile.flush();
 }
 
-void KeyListener::onKeyPressed(GlobalKeyEvent ev)
+void KeyListener::onKeyPressed(const GlobalKeyEvent &ev)
 {
-  if (m_currentEventCount == m_recordedEvents.size())
+  if (ev.scanCode >= RECORDED_SCANCODE_COUNT) // very unlikely
+    return;
+
+  m_keyPresses[ev.scanCode]++;
+  
+  m_currentEventCount++;
+  if (m_currentEventCount % SAVE_PERIOD == 0)
     dumpRecordedEvents();
-  m_recordedEvents[m_currentEventCount++] = { EventType::KEY, {.key = ev} };
 }
 
-void KeyListener::onButtonPressed(GlobalButtonEvent ev)
+void KeyListener::onButtonPressed(const GlobalButtonEvent &ev)
 {
-  if (m_currentEventCount == m_recordedEvents.size())
+  if (!ev.isPressed)
+    return;
+
+  ClickPos p{ ev.cursorX / BUTTON_POSITION_THRESHOLD, ev.cursorY / BUTTON_POSITION_THRESHOLD };
+  m_minButtonX = std::min(m_minButtonX, p.x);
+  m_maxButtonX = std::max(m_maxButtonX, p.x);
+  m_minButtonY = std::min(m_minButtonY, p.y);
+  m_maxButtonY = std::max(m_maxButtonY, p.y);
+  m_buttonPresses[p]++;
+  
+  m_currentEventCount++;
+  if (m_currentEventCount % SAVE_PERIOD == 0)
     dumpRecordedEvents();
-  m_recordedEvents[m_currentEventCount++] = { EventType::BUTTON, {.button = ev} };
 }
 
 
