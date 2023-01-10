@@ -16,47 +16,31 @@ static bool cstrStartsWith(const char *str, std::string_view part)
 CommandEnumPart::CommandEnumPart(const std::string &placeHolder, std::initializer_list<const char *> parts)
   : CommandPart(placeHolder)
 {
-  m_partsCount = parts.size();
-  m_parts = new const char*[m_partsCount];
-  auto iterator = parts.begin();
-  for (size_t i = 0; i < m_partsCount; i++) {
-    m_parts[i] = *iterator;
-    iterator++;
-  }
+  m_parts.reserve(parts.size());
+  for (auto part : parts)
+    m_parts.push_back(part);
 }
 
-CommandEnumPart::CommandEnumPart(const std::string &placeHolder, const std::vector<const char *> &parts)
-  : CommandPart(placeHolder)
+CommandEnumPart::CommandEnumPart(const std::string &placeHolder, const std::vector<std::string> &parts)
+  : CommandPart(placeHolder), m_parts(parts)
 {
-  m_partsCount = parts.size();
-  m_parts = new const char *[m_partsCount];
-  auto iterator = parts.begin();
-  for (size_t i = 0; i < m_partsCount; i++) {
-    m_parts[i] = *iterator;
-    iterator++;
-  }
 }
 
 CommandEnumPart::~CommandEnumPart()
 {
-  delete[] m_parts;
 }
 
 void CommandEnumPart::getCompletions(std::string_view part, std::vector<CommandCompletion> &out_completions) const
 {
-  for (size_t i = 0; i < m_partsCount; i++) {
-    if (cstrStartsWith(m_parts[i], part))
-      out_completions.push_back({ m_parts[i] + part.length() });
+  for (size_t i = 0; i < m_parts.size(); i++) {
+    if (cstrStartsWith(m_parts[i].c_str(), part))
+      out_completions.push_back({ m_parts[i].c_str() + part.length()});
   }
 }
 
 bool CommandEnumPart::isGood(std::string_view part) const
 {
-  for (size_t i = 0; i < m_partsCount; i++) {
-    if (part == m_parts[i])
-      return true;
-  }
-  return false;
+  return std::find(m_parts.begin(), m_parts.end(), part) != m_parts.end();
 }
 
 CommandSaveFilePart::CommandSaveFilePart(const std::string &placeHolder, const fs::path dirPath, bool allowCreate)

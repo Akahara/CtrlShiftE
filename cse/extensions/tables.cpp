@@ -68,7 +68,7 @@ Tables::Tables()
   m_tables.emplace("ascii", []() { return new ASCIITableWindow; });
   m_tables.emplace("glsl", []() { return new GLSLTableWindow; });
 
-  std::vector<const char *> tableNames;
+  std::vector<std::string> tableNames;
   for (const auto &[name, _] : m_tables)
     tableNames.push_back(name);
 

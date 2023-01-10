@@ -155,6 +155,7 @@
     <ClCompile Include="cse\commands.cpp" />
     <ClCompile Include="cse\cse.cpp" />
     <ClCompile Include="cse\extensions\color_picker.cpp" />
+    <ClCompile Include="cse\extensions\gotodir.cpp" />
     <ClCompile Include="cse\extensions\key_stats_recorder.cpp" />
     <ClCompile Include="cse\extensions\personnal_links.cpp" />
     <ClCompile Include="cse\extensions\recorded_commands.cpp" />
@@ -179,6 +180,7 @@
     <ClInclude Include="cse\cse.h" />
     <ClInclude Include="cse\extensions\color_picker.h" />
     <ClInclude Include="cse\extensions\debug_window.h" />
+    <ClInclude Include="cse\extensions\gotodir.h" />
     <ClInclude Include="cse\extensions\personnal_links.h" />
     <ClInclude Include="cse\extensions\tables.h" />
     <ClInclude Include="cse\graphics_spec.h" />

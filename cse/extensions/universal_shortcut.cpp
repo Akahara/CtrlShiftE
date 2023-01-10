@@ -28,6 +28,7 @@ private:
   std::vector<CommandCompletion> m_currentCompletions;
   std::vector<std::string_view>  m_currentInputParts;
   std::vector<bool>              m_currentInputPartsValidState;
+  bool                           m_alreadyPrompted = false;
   struct {
     int position = 0;
     int selectionStart = 0;

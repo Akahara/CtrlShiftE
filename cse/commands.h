@@ -26,15 +26,15 @@ public:
 
 class CommandEnumPart : public CommandPart {
 private:
-  const char **m_parts;
-  size_t       m_partsCount;
+  std::vector<std::string> m_parts;
 public:
   CommandEnumPart(const std::string &placeHolder, std::initializer_list<const char *> parts);
-  CommandEnumPart(const std::string &placeHolder, const std::vector<const char *> &parts);
+  CommandEnumPart(const std::string &placeHolder, const std::vector<std::string> &parts);
   ~CommandEnumPart();
 
   void getCompletions(std::string_view part, std::vector<CommandCompletion> &out_completions) const override;
   bool isGood(std::string_view part) const override;
+  void setParts(const std::vector<std::string> &parts) { m_parts = parts; /* note the copy */ }
 };
 
 class CommandTextPart : public CommandPart {

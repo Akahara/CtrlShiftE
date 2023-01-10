@@ -871,6 +871,7 @@ WONDER_EDIT(
 }
 
 #include "../cse/graphics_spec.h" // not wrapped in a WONDER_EDIT because of macro expansion order but should be
+#include "../cse/cse.h"
 
 static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
 {
@@ -1004,6 +1005,16 @@ static void ImGui_ImplWin32_SetWindowFocus(ImGuiViewport* viewport)
     ImGui_ImplWin32_ViewportData* vd = (ImGui_ImplWin32_ViewportData*)viewport->PlatformUserData;
     IM_ASSERT(vd->Hwnd != 0);
     ::BringWindowToTop(vd->Hwnd);
+WONDER_EDIT(
+    /* dirty fix to allow the window to not disapear */
+    INPUT inputs[2]{}; // an alt press is necessary to make the window the foreground window
+    inputs[0].type = inputs[1].type = INPUT_KEYBOARD;
+    inputs[0].ki.wVk = inputs[1].ki.wVk = 0xA4;
+    inputs[0].ki.wScan = inputs[1].ki.wScan = 0;
+    inputs[1].ki.dwFlags |= KEYEVENTF_KEYUP;
+    SendInput(2, inputs, sizeof(INPUT));
+,
+)
     ::SetForegroundWindow(vd->Hwnd);
     ::SetFocus(vd->Hwnd);
 }

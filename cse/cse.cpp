@@ -31,7 +31,7 @@ void cse::logInfo(std::string_view line)
 void cse::addCommand(Command &&command)
 {
   log(std::string("Added command ") + command.prefix);
-  iotGenerators.push_back(command);
+  iotGenerators.push_back(std::move(command));
 }
 
 static fs::path getOrCreateUserFilesPath()
@@ -58,7 +58,6 @@ std::vector<Command> &cse::getCommands()
   return iotGenerators;
 }
 
-
 WindowProcess::WindowProcess(std::string_view windowName)
   : m_windowName(windowName)
 {
@@ -79,6 +78,12 @@ namespace cse::extensions {
 void openWebPage(const char *url)
 {
   ShellExecuteA(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
+}
+
+void openFileDir(const char *path)
+{
+  cse::log("Opening directory " + std::string(path));
+  ShellExecuteA(NULL, "explore", path, NULL, NULL, SW_SHOWNORMAL);
 }
 
 }

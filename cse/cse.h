@@ -80,6 +80,7 @@ class CSEExtension {
 public:
            CSEExtension() = default;
   virtual ~CSEExtension() = default;
+  virtual void reload() {};
 };
 
 static Executor runLater(Executor executor)
@@ -103,6 +104,7 @@ static Executor runLater(Executor executor)
  * is undefined.
  */
 void openWebPage(const char *url);
+void openFileDir(const char *path);
 
 }
 
