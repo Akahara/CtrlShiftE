@@ -77,6 +77,7 @@ namespace cse::extensions {
 
 void openWebPage(const char *url)
 {
+  cse::log("Opening web page" + std::string(url));
   ShellExecuteA(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
 }
 

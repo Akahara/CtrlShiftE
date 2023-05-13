@@ -14,7 +14,6 @@
 #include "cse/extensions/recorded_commands.h"
 #include "cse/extensions/color_picker.h"
 #include "cse/extensions/tables.h"
-#include "cse/extensions/personnal_links.h"
 #include "cse/extensions/gotodir.h"
 
 static std::vector<cse::extensions::CSEExtension *> s_activeExtensions;
@@ -34,7 +33,6 @@ static void loadDefaultExtensions()
   s_activeExtensions.push_back(new cse::extensions::RecordedCommands);
   s_activeExtensions.push_back(new cse::extensions::ColorPicker);
   s_activeExtensions.push_back(new cse::extensions::Tables);
-  s_activeExtensions.push_back(new cse::extensions::PersonnalLinks);
   s_activeExtensions.push_back(new cse::extensions::GotoDir);
 
   cse::addCommand({

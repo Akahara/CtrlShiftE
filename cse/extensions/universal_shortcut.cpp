@@ -108,7 +108,6 @@ void UniversalShortcutWindow::render()
   ImVec2 windowOrigin = ImGui::GetWindowPos(); windowOrigin.y += 3.f;
   ImVec2 windowSize = ImGui::GetWindowSize();
   ImVec2 cbox = ImGui::CalcTextSize(m_currentInput, m_currentInput + m_carret.position);
-  //drawList->AddRectFilled(windowOrigin, { windowOrigin.x + windowSize.x, windowOrigin.y + windowSize.y }, IM_COL32(255, 255, 255, 255));
   drawList->AddLine({ windowOrigin.x + cbox.x + 1.f, windowOrigin.y }, { windowOrigin.x + cbox.x + 1.f, windowOrigin.y + cbox.y }, IM_COL32_WHITE);
   if (m_carret.selectionEnd != m_carret.selectionStart) {
     int smin = std::min(m_carret.selectionStart, m_carret.selectionEnd);
@@ -134,8 +133,8 @@ void UniversalShortcutWindow::render()
   // draw remaining parts placeholders
   if (m_currentCommand != nullptr && m_currentInputParts.size() < m_currentCommand->parts.size()) {
     ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 100));
-    ImGui::SameLine(0, 0);
     for (size_t i = m_currentInputParts.size(); i < m_currentCommand->parts.size(); i++) {
+      ImGui::SameLine(0, 0);
       ImGui::Text("<%s> ", m_currentCommand->parts[i]->getPlaceHolder().c_str());
     }
     ImGui::PopStyleColor();
@@ -148,7 +147,7 @@ void UniversalShortcutWindow::render()
   constexpr size_t MAX_INFO_PADDING = 8;
   maxCompletionLength = std::min(maxCompletionLength, MAX_INFO_PADDING); // do not add more than 8 spaces
 
-  for (size_t i = 0; i < m_currentCompletions.size(); i++) {
+  for (size_t i = std::max((int)m_selectedCompletionIndex-2, 0); i < m_currentCompletions.size(); i++) {
     CommandCompletion &completion = m_currentCompletions[i];
     ImGui::PushStyleColor(ImGuiCol_Text, m_selectedCompletionIndex == i ? IM_COL32(255, 255, 255, 255) : IM_COL32(180, 180, 180, 255));
     ImGui::Text("%s%s", m_currentInput, completion.missingPart.c_str());
