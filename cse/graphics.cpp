@@ -109,12 +109,12 @@ void graphics::loadGraphics()
   mainWindow.cw.hCursor       = NULL;
   mainWindow.cw.hbrBackground = NULL;
   mainWindow.cw.lpszMenuName  = NULL;
-  mainWindow.cw.lpszClassName = L"CtrlShiftE_Class";
+  mainWindow.cw.lpszClassName = "CtrlShiftE_Class";
   mainWindow.cw.hIconSm       = NULL;
   RegisterClassEx(&mainWindow.cw);
   mainWindow.wnd = CreateWindow(
     mainWindow.cw.lpszClassName,
-    L"CtrlShiftE",
+    "CtrlShiftE",
     WS_OVERLAPPEDWINDOW,
     0, 0, 1, 100,
     NULL,

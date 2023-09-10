@@ -12,8 +12,6 @@
 
 class UniversalShortcutBringer : public GlobalKeyListener {
 public:
-  static constexpr GlobalKeystroke KEYSTROKE{ 'E', KeyFlags_Ctrl | KeyFlags_Shift };
-
   void onKeyPressed(const GlobalKeyEvent &ev) override;
   void onButtonPressed(const GlobalButtonEvent &ev) override;
 };
@@ -48,7 +46,7 @@ private:
 
 void UniversalShortcutBringer::onKeyPressed(const GlobalKeyEvent &ev)
 {
-  if (KEYSTROKE.match(ev))
+  if (cse::extensions::UniversalShortcut::KEYSTROKE.match(ev) && ev.keyPress == PressType_Press)
     graphics::createWindow(std::make_shared<UniversalShortcutWindow>());
 }
 
@@ -309,7 +307,7 @@ namespace cse::extensions {
 
 UniversalShortcut::UniversalShortcut()
 {
-  cse::keys::addGlobalySuppressedKeystroke(UniversalShortcutBringer::KEYSTROKE);
+  cse::keys::addGlobalySuppressedKeystroke(UniversalShortcut::KEYSTROKE);
   cse::keys::addGlobalKeyListener(std::make_shared<UniversalShortcutBringer>());
 }
 

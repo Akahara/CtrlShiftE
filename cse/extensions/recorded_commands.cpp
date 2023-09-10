@@ -72,11 +72,11 @@ static void addWebCommand(const char *cseCommand, const char *tooltip, const cha
 
 RecordedCommands::RecordedCommands()
 {
-  addRawCommand("vscode", "opens VScode",    "code");
-  addRawCommand("note",   "opens Notepad++", "C:\\Program Files (x86)\\Notepad++\\notepad++.exe");
+  addRawCommand("vscode",   "open VScode",      "code");
+  addRawCommand("note",     "open Notepad++",   "C:\\Program Files\\Notepad++\\notepad++.exe");
   addShellCommand("python", "python shell",     "C:\\Windows\\System32\\cmd.exe", "/c python");
   addShellCommand("js",     "javascript shell", "C:\\Windows\\System32\\cmd.exe", "/c node");
-  addWebCommand("regex", "Regex101 substitution and matching", "https://regex101.com/");
+  addWebCommand("regex",    "Regex101 substitution and matching", "https://regex101.com/");
   addGoogleSearchCommands();
 }
 

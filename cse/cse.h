@@ -9,20 +9,37 @@
 
 #include "commands.h"
 
+#define CSE_LOGS(logs, stream) { std::stringstream ss; ss << logs; cse::log##stream(ss.str()); }
+#define CSE_LOG(logs) CSE_LOGS(logs, )
+#define CSE_LOGINF(logs) CSE_LOGS(logs, Info)
+#define CSE_LOGERR(logs) CSE_LOGS(logs, Err)
+
 typedef unsigned char KeyFlags;
 
 enum KeyFlags_ : KeyFlags {
-  KeyFlags_None   = 0,
-  KeyFlags_Option = 1 << 0,
-  KeyFlags_Ctrl   = 1 << 1,
-  KeyFlags_Shift  = 1 << 2,
+  KeyFlags_None    = 0,
+  KeyFlags_Option  = 1 << 0,
+  KeyFlags_Ctrl    = 1 << 1,
+  KeyFlags_Shift   = 1 << 2,
+};
+
+enum PressType
+{
+  PressType_Release,
+  PressType_Press,
+  PressType_Repeat,
 };
 
 struct GlobalKeyEvent {
-  unsigned char keyCode;
-  unsigned char scanCode;
-  KeyFlags keyFlags;
-  long long pressTime;
+  unsigned char keyCode = 0;
+  unsigned char scanCode = 0;
+  PressType keyPress = PressType_Release;
+  KeyFlags keyFlags = KeyFlags_None;
+  long long pressTime = 0;
+
+  bool isOptionPressed() const { return keyFlags & KeyFlags_Option;  }
+  bool isCtrlPressed()   const { return keyFlags & KeyFlags_Ctrl;    }
+  bool isShiftPressed()  const { return keyFlags & KeyFlags_Shift;   }
 };
 
 struct GlobalButtonEvent {
@@ -36,7 +53,8 @@ struct GlobalKeystroke {
   unsigned char keyCode;
   KeyFlags keyFlags;
 
-  bool match(const GlobalKeyEvent &ks) const;
+  bool match(const GlobalKeyEvent &ev) const;
+  bool matchExactly(const GlobalKeyEvent &ev) const;
 };
 
 class GlobalKeyListener {
@@ -62,6 +80,10 @@ namespace keys {
 void addGlobalySuppressedKeystroke(GlobalKeystroke keystroke);
 void addGlobalKeyListener(const std::shared_ptr<GlobalKeyListener> &listener);
 void captureNextClick(std::function<void(const GlobalButtonEvent&)> &&callback);
+void sendKeyImmediate(unsigned short scanCode, unsigned short vkCode);
+void sendKey(const GlobalKeyEvent &key);
+void sendButton(const GlobalButtonEvent &btn);
+void prepareEventsDispatch(); // should be called after physical monitors change
 
 long getScreenCursorX();
 long getScreenCursorY();

@@ -106,7 +106,7 @@ public:
 
     if (ImGui::CollapsingHeader("D3 Color schemes (click to copy)", ImGuiTreeNodeFlags_DefaultOpen)) {
       for (size_t i = 0, s = 0; i < sizeof(D3_COLOR_SCHEMES)/sizeof(D3_COLOR_SCHEMES[0]); s++) {
-        ImGui::PushID(i);
+        ImGui::PushID((int)i);
         drawColorScheme(&D3_COLOR_SCHEMES[i]);
         if (s % 2 == 0 && s < 12) ImGui::SameLine();
         ImGui::PopID();
@@ -172,7 +172,7 @@ public:
 
   inline void replaceFirst(std::string &toAffect, const char *toReplace, std::string replacement)
   {
-    int idx = toAffect.find(toReplace);
+    size_t idx = toAffect.find(toReplace);
     if (idx == std::string::npos) return;
     toAffect.replace(idx, strlen(toReplace), replacement);
   }

@@ -7,6 +7,7 @@
 
 #include <Windows.h>
 
+#include <bitset>
 #include "graphics.h"
 
 static struct KeyEventListener {
@@ -14,6 +15,7 @@ static struct KeyEventListener {
   std::vector<GlobalKeyEvent> polledKeyEvents;
   std::vector<GlobalButtonEvent> polledButtonEvents;
   std::function<void(const GlobalButtonEvent&)> nextClickCaptureCallback;
+  std::vector<DWORD> pressedKeys;
   bool wantsNextClickCapture = false;
   std::mutex polledEventsMutex;
 } *globalKeyListener;
@@ -23,6 +25,7 @@ static std::vector<std::shared_ptr<GlobalKeyListener>> globalKeyListeners;
 
 static struct MousePosition {
   long cursorX, cursorY;
+  int virtualViewportWidth, virtualViewportHeight;
 } currentCursor;
 
 inline long long currentTimeMillis()
@@ -34,15 +37,24 @@ inline long long currentTimeMillis()
 static bool processKey(KBDLLHOOKSTRUCT *keyEvent)
 {
   KeyFlags flags = 0;
-  flags |= (keyEvent->flags & LLKHF_ALTDOWN) ? KeyFlags_Option : 0;
-  flags |= GetAsyncKeyState(VK_CONTROL)      ? KeyFlags_Ctrl   : 0;
-  flags |= GetAsyncKeyState(VK_SHIFT)        ? KeyFlags_Shift  : 0;
+  flags |= (keyEvent->flags & LLKHF_ALTDOWN) ? KeyFlags_Option  : 0;
+  flags |= GetAsyncKeyState(VK_CONTROL)      ? KeyFlags_Ctrl    : 0;
+  flags |= GetAsyncKeyState(VK_SHIFT)        ? KeyFlags_Shift   : 0;
   long long eventTime = currentTimeMillis(); // cannot use keyEvent->time because it is relative to when the computer booted
   GlobalKeyEvent ev{};
+  bool pressed = !(keyEvent->flags & LLKHF_UP);
+  auto previousPressed = std::find(globalKeyListener->pressedKeys.begin(), globalKeyListener->pressedKeys.end(), keyEvent->vkCode);
+  bool wasPreviouslyPressed = previousPressed != globalKeyListener->pressedKeys.end();
+  ev.keyPress = !pressed ? PressType_Release : (wasPreviouslyPressed ? PressType_Repeat : PressType_Press);
   ev.keyCode = (unsigned char)keyEvent->vkCode;
   ev.scanCode = (unsigned char)keyEvent->scanCode;
   ev.keyFlags = flags;
   ev.pressTime = eventTime;
+
+  if (pressed && !wasPreviouslyPressed)
+    globalKeyListener->pressedKeys.emplace_back(keyEvent->vkCode);
+  else if (!pressed && wasPreviouslyPressed)
+    globalKeyListener->pressedKeys.erase(previousPressed);
 
   {
     std::lock_guard _lock{ globalKeyListener->polledEventsMutex };
@@ -62,7 +74,7 @@ static bool processMouse(MSLLHOOKSTRUCT *mouseEvent, WPARAM eventWParam)
   long long eventTime = currentTimeMillis(); // cannot use keyEvent->time because it is relative to when the computer booted
   GlobalButtonEvent ev{};
   // optimization: WM_[L/R]BUTTON[DOWN/UP] are 0x201..0x205
-  ev.button    = (eventWParam - WM_LBUTTONDOWN) / 2;
+  ev.button    = (int)((eventWParam - WM_LBUTTONDOWN) / 2);
   ev.isPressed = eventWParam & 1;
   ev.pressTime = eventTime;
   ev.cursorX = mouseEvent->pt.x;
@@ -88,9 +100,7 @@ static LRESULT CALLBACK globalKeyboardHookProc(int code, WPARAM wParam, LPARAM l
 {
   if(code < 0)
     return CallNextHookEx(0, code, wParam, lParam);
-  if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)
-    return processKey((KBDLLHOOKSTRUCT *)lParam);
-  return CallNextHookEx(0, code, wParam, lParam);
+  return processKey((KBDLLHOOKSTRUCT *)lParam);
 }
 
 static LRESULT CALLBACK globalMouseHookProc(int code, WPARAM wParam, LPARAM lParam)
@@ -148,6 +158,47 @@ void captureNextClick(std::function<void(const GlobalButtonEvent&)> &&callback)
   globalKeyListener->wantsNextClickCapture = true;
 }
 
+void sendKeyImmediate(unsigned short scanCode, unsigned short vkCode)
+{
+  INPUT inputs[2]{};
+  inputs[0].type = INPUT_KEYBOARD;
+  inputs[0].ki.wScan = scanCode;
+  inputs[0].ki.wVk = vkCode;
+  inputs[1].type = INPUT_KEYBOARD;
+  inputs[1].ki.wScan = scanCode;
+  inputs[1].ki.wVk = vkCode;
+  inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
+  SendInput(2, inputs, sizeof INPUT);
+}
+
+void sendKey(const GlobalKeyEvent &key)
+{
+  INPUT input{};
+  input.type = INPUT_KEYBOARD;
+  input.ki.wScan = key.scanCode;
+  input.ki.wVk = key.keyCode;
+  input.ki.dwFlags |= key.keyPress == PressType_Release ? KEYEVENTF_KEYUP : 0;
+  SendInput(1, &input, sizeof INPUT);
+}
+
+void sendButton(const GlobalButtonEvent &btn)
+{
+  INPUT input{};
+  input.type = INPUT_MOUSE;
+  input.mi.dx = btn.cursorX * 65535 / currentCursor.virtualViewportWidth;
+  input.mi.dy = btn.cursorY * 65535 / currentCursor.virtualViewportHeight;
+  input.mi.dwFlags |= MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK;
+  input.mi.dwFlags |= btn.isPressed ? (btn.button == 0 ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_RIGHTDOWN) : (btn.button == 0 ? MOUSEEVENTF_LEFTUP : MOUSEEVENTF_RIGHTUP);
+  SendInput(1, &input, sizeof INPUT);
+}
+
+void prepareEventsDispatch()
+{
+  SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+  currentCursor.virtualViewportWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+  currentCursor.virtualViewportHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+}
+
 long getScreenCursorX()
 {
   return currentCursor.cursorX;
@@ -181,7 +232,6 @@ void unregisterGlobalHook()
 void pollEvents()
 {
   if (!globalKeyListener->polledEventsMutex.try_lock()) {
-    cse::log(">nolock");
     return; // if the mutex was busy return and try again on the next app frame (1/60th of a second does not matter much)
   }
   // take ownership of the events list to release the mutex asap

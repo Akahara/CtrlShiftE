@@ -135,8 +135,8 @@ void KeyListener::dumpRecordedEvents()
 
 void KeyListener::onKeyPressed(const GlobalKeyEvent &ev)
 {
-  if (ev.scanCode >= RECORDED_SCANCODE_COUNT) // very unlikely
-    return;
+  if (ev.keyPress != PressType_Press) return;
+  if (ev.scanCode >= RECORDED_SCANCODE_COUNT) return; // very unlikely
 
   m_keyPresses[ev.scanCode]++;
   

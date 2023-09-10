@@ -73,6 +73,11 @@ bool GlobalKeystroke::match(const GlobalKeyEvent &ev) const
   return keyCode == ev.keyCode && (keyFlags & ev.keyFlags) == keyFlags;
 }
 
+bool GlobalKeystroke::matchExactly(const GlobalKeyEvent &ev) const
+{
+    return keyCode == ev.keyCode && ev.keyFlags == keyFlags;
+}
+
 namespace cse::extensions {
 
 void openWebPage(const char *url)

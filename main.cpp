@@ -15,6 +15,7 @@
 #include "cse/extensions/color_picker.h"
 #include "cse/extensions/tables.h"
 #include "cse/extensions/gotodir.h"
+#include "cse/extensions/keyswaps.h"
 
 static std::vector<cse::extensions::CSEExtension *> s_activeExtensions;
 
@@ -34,6 +35,7 @@ static void loadDefaultExtensions()
   s_activeExtensions.push_back(new cse::extensions::ColorPicker);
   s_activeExtensions.push_back(new cse::extensions::Tables);
   s_activeExtensions.push_back(new cse::extensions::GotoDir);
+  s_activeExtensions.push_back(new cse::extensions::KeySwaps);
 
   cse::addCommand({
     "reload",
@@ -57,14 +59,10 @@ static void unloadExtensions()
 INT WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
                    _In_ PSTR lpCmdLine, _In_ INT nCmdShow)
 {
-  // pre-initialization
   graphics::loadGraphics();
-
-  // initialization
   loadDefaultExtensions();
-
-  // post-initialization
   cse::keys::registerGlobalHook();
+  cse::keys::prepareEventsDispatch();
 
   graphics::createWindow(std::make_shared<DebugWindowProcess>());
 
