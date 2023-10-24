@@ -74,7 +74,7 @@ static bool processMouse(MSLLHOOKSTRUCT *mouseEvent, WPARAM eventWParam)
   long long eventTime = currentTimeMillis(); // cannot use keyEvent->time because it is relative to when the computer booted
   GlobalButtonEvent ev{};
   // optimization: WM_[L/R]BUTTON[DOWN/UP] are 0x201..0x205
-  ev.button    = (int)((eventWParam - WM_LBUTTONDOWN) / 2);
+  ev.button    = static_cast<int>((eventWParam - WM_LBUTTONDOWN) / 2);
   ev.isPressed = eventWParam & 1;
   ev.pressTime = eventTime;
   ev.cursorX = mouseEvent->pt.x;

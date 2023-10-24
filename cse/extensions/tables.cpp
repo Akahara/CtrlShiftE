@@ -105,8 +105,8 @@ public:
     if (ImGui::Button("rgb($R,$G,$B)")) strcpy_s(m_userFormat, "rgb($R,$G,$B)");
 
     if (ImGui::CollapsingHeader("D3 Color schemes (click to copy)", ImGuiTreeNodeFlags_DefaultOpen)) {
-      for (size_t i = 0, s = 0; i < sizeof(D3_COLOR_SCHEMES)/sizeof(D3_COLOR_SCHEMES[0]); s++) {
-        ImGui::PushID((int)i);
+      for (int i = 0, s = 0; i < sizeof(D3_COLOR_SCHEMES)/sizeof(D3_COLOR_SCHEMES[0]); s++) {
+        ImGui::PushID(i);
         drawColorScheme(&D3_COLOR_SCHEMES[i]);
         if (s % 2 == 0 && s < 12) ImGui::SameLine();
         ImGui::PopID();

@@ -46,6 +46,24 @@ static void loadDefaultExtensions()
       reloadExtensions();
     }
   });
+  
+  cse::addCommand({
+    "quit",
+    "quit CtrlShiftE",
+    { /* no parameters */ },
+    [](const auto &parts) {
+      graphics::closeAllWindows();
+    }
+  });
+
+  cse::addCommand({
+    "exit",
+    "quit CtrlShiftE",
+    { /* no parameters */ },
+    [](const auto &parts) {
+      graphics::closeAllWindows();
+    }
+  });
 }
 
 static void unloadExtensions()

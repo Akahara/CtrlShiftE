@@ -194,8 +194,7 @@ void graphics::render()
     if (window.process->isVisible()) {
       window_helper::prepareAlwaysOnTop();
       bool visible = window.process->beginWindow();
-      if(visible)
-        window.process->render();
+      if (visible) window.process->render();
       ImGui::End();
     }
   }

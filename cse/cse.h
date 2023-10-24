@@ -71,6 +71,13 @@ void log(std::string_view line);
 void logErr(std::string_view line);
 void logInfo(std::string_view line);
 
+void logm(auto &&...args)
+{
+  std::stringstream ss;
+  (ss << ... << args);
+  log(ss.str());
+}
+
 void addCommand(Command &&command);
 
 const std::filesystem::path &getUserFilesPath();
