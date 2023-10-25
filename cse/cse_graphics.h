@@ -1,7 +1,7 @@
-#pragma once
+﻿#pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 
 #include "../imgui/imgui.h"
 
@@ -11,7 +11,7 @@ protected:
   bool m_isVisible = true;
 
 public:
-  WindowProcess(std::string_view windowName);
+  explicit WindowProcess(std::string_view windowName);
   virtual ~WindowProcess() = default;
 
   virtual bool beginWindow();
@@ -22,22 +22,24 @@ public:
   void setVisible(bool visible) { m_isVisible = visible; }
 };
 
-namespace graphics {
+namespace cse::graphics {
+
+#ifdef CSE_EXPOSE_INTERNALS
+struct Window {
+  std::shared_ptr<WindowProcess> process;
+};
 
 void loadGraphics();
 void destroyGraphics();
+void closeAllWindows();
+#endif
 
 void render();
 bool shouldDispose();
 
 void createWindow(const std::shared_ptr<WindowProcess> &process);
-void closeAllWindows();
-
-namespace window_helper {
 
 void prepareAlwaysOnTop();
 void prepareTransparent(bool *cond);
-
-}
 
 }

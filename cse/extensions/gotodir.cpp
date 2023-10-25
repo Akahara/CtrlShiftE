@@ -2,7 +2,6 @@
 
 #include <fstream>
 #include <filesystem>
-#include <assert.h>
 
 namespace cse::extensions {
 
@@ -10,11 +9,11 @@ namespace fs = std::filesystem;
 
 static std::vector<std::string> s_dirnames;
 static std::vector<fs::path> s_dirpaths;
-static CommandEnumPart *s_directoryNameInput;
+static std::shared_ptr<CommandEnumPart> s_directoryNameInput;
 
 static fs::path getSettingsFile()
 {
-  fs::path path = cse::getUserFilesPath() / "cd.txt";
+  fs::path path = cse::extensions::getUserFilesPath() / "cd.txt";
   if (!fs::is_regular_file(path)) {
     std::ofstream file{ path };
     file 
@@ -40,12 +39,12 @@ static void loadDirPaths()
       continue;
     std::string dirname = line.substr(0, split);
     std::string dirpath = line.substr(split + 1);
-    auto existingIdx = std::find(s_dirnames.begin(), s_dirnames.end(), dirname);
+    auto existingIdx = std::ranges::find(s_dirnames, dirname);
     if (existingIdx != s_dirnames.end()) {
       s_dirpaths[existingIdx - s_dirnames.begin()] = dirpath; // replace existing
     } else {
       s_dirnames.push_back(dirname);
-      s_dirpaths.push_back(dirpath);
+      s_dirpaths.emplace_back(dirpath);
     }
   }
 }
@@ -60,10 +59,10 @@ GotoDir::GotoDir()
 {
   loadDirPaths();
 
-  cse::addCommand({
+  cse::commands::addCommand({
     "cd",
     "open a directory shortcut",
-    { s_directoryNameInput = new CommandEnumPart("dirname", s_dirnames) },
+    { s_directoryNameInput = std::make_shared<CommandEnumPart>("dirname", s_dirnames) },
     [](const auto &args) {
       auto idx = std::find(s_dirnames.begin(), s_dirnames.end(), args[0]);
       assert(idx != s_dirnames.end());
@@ -74,10 +73,10 @@ GotoDir::GotoDir()
     }
   });
 
-  cse::addCommand({
+  cse::commands::addCommand({
     "cdadd",
     "add a directory shortcut",
-    { new CommandTextPart("dirname"), new CommandTextPart("path") },
+    { std::make_shared<CommandTextPart>("dirname"), std::make_shared<CommandTextPart>("path") },
     [this](const auto &args) {
       const std::string_view &dirname = args[0];
       const std::string_view &dirpath = args[1];
@@ -85,10 +84,6 @@ GotoDir::GotoDir()
       reload();
     }
   });
-}
-
-GotoDir::~GotoDir()
-{
 }
 
 void GotoDir::reload()

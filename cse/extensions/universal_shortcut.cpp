@@ -1,52 +1,18 @@
+#define CSE_EXPOSE_INTERNALS
+#include "cse_commands.h"
+#undef CSE_EXPOSE_INTERNALS
 #include "universal_shortcut.h"
 
-#include <sstream>
-#include <iostream>
 #include <algorithm>
-#include <tuple>
 
 #include "../../imgui/imgui_internal.h"
 
-#include "../cse_internal.h"
-#include "../graphics.h"
-
-class UniversalShortcutBringer : public GlobalKeyListener {
-public:
-  void onKeyPressed(const GlobalKeyEvent &ev) override;
-  void onButtonPressed(const GlobalButtonEvent &ev) override;
-};
-
-class UniversalShortcutWindow : public WindowProcess {
-private:
-  static constexpr size_t        MAX_INPUT_SIZE = 64;
-  char                           m_currentInput[MAX_INPUT_SIZE + 1];
-  int                            m_displayFrame;
-  size_t                         m_selectedCompletionIndex;
-  Command                       *m_currentCommand;
-  std::vector<CommandCompletion> m_currentCompletions;
-  std::vector<std::string_view>  m_currentInputParts;
-  std::vector<bool>              m_currentInputPartsValidState;
-  bool                           m_alreadyPrompted = false;
-  struct {
-    int position = 0;
-    int selectionStart = 0;
-    int selectionEnd = 0;
-  } m_carret;
-public:
-  UniversalShortcutWindow();
-  bool beginWindow() override;
-  void render() override;
-private:
-  int onSpecialKey(ImGuiInputTextCallbackData *data);
-  void updateCompletions();
-  bool runSelectedCommand();
-};
-
-
+namespace cse::extensions
+{
 
 void UniversalShortcutBringer::onKeyPressed(const GlobalKeyEvent &ev)
 {
-  if (cse::extensions::UniversalShortcut::KEYSTROKE.match(ev) && ev.keyPress == PressType_Press)
+  if (cse::extensions::UniversalShortcut::KEYSTROKE.doesStrokeMatch(ev) && ev.keyPress == PressType_Press)
     graphics::createWindow(std::make_shared<UniversalShortcutWindow>());
 }
 
@@ -55,10 +21,10 @@ void UniversalShortcutBringer::onButtonPressed(const GlobalButtonEvent &ev)
 }
 
 UniversalShortcutWindow::UniversalShortcutWindow()
-  : WindowProcess("CtrlShiftE"),
-  m_displayFrame(0),
-  m_selectedCompletionIndex(-1),
-  m_currentInput("")
+  : WindowProcess("CtrlShiftE")
+  , m_displayFrame(0)
+  , m_selectedCompletionIndex(-1)
+  , m_currentInput("")
 {
   updateCompletions();
 }
@@ -214,7 +180,7 @@ int UniversalShortcutWindow::onSpecialKey(ImGuiInputTextCallbackData *data)
 
 static Command *getCSECommand(std::string_view prefix)
 {
-  for (auto &cmd : cse::getCommands()) {
+  for (auto &cmd : cse::commands::getCommands()) {
     if (cmd.prefix == prefix)
       return &cmd;
   }
@@ -235,7 +201,7 @@ void UniversalShortcutWindow::updateCompletions()
   if (spaceIdx == -1) {
     // no command matching, autocomplete with prefix
     bool isValidCmd = false;
-    for (auto &cmd : cse::getCommands()) {
+    for (auto &cmd : cse::commands::getCommands()) {
       if (cmd.prefix.starts_with(currentInput)) {
         m_currentCompletions.push_back({ cmd.prefix.substr(currentInput.size()), 1.f, cmd.tooltip });
         if (cmd.prefix.size() == currentInput.size())
@@ -253,7 +219,7 @@ void UniversalShortcutWindow::updateCompletions()
   if (m_currentCommand == nullptr)
     return; // no matching command
 
-  for (CommandPart *part : m_currentCommand->parts)
+  for (auto &part : m_currentCommand->parts)
     part->updateState();
 
   // check all parts valid state
@@ -278,12 +244,12 @@ void UniversalShortcutWindow::updateCompletions()
 
   // check the last part for completions
   std::string_view remainingInputPart = currentInput.substr(currentInput.find_last_of(' ')+1);
-  size_t lastPartIndex = std::count(currentInput.begin(), currentInput.end(), ' ') - 1;
+  size_t lastPartIndex = std::ranges::count(currentInput, ' ') - 1;
 
   if (lastPartIndex < m_currentCommand->parts.size())
     m_currentCommand->parts[lastPartIndex]->getCompletions(remainingInputPart, m_currentCompletions);
 
-  std::sort(m_currentCompletions.begin(), m_currentCompletions.end(), [](auto &c1, auto &c2) { return c1.relevanceScore > c2.relevanceScore; });
+  std::ranges::sort(m_currentCompletions, [](auto &c1, auto &c2) { return c1.relevanceScore > c2.relevanceScore; });
 }
 
 bool UniversalShortcutWindow::runSelectedCommand()
@@ -293,7 +259,7 @@ bool UniversalShortcutWindow::runSelectedCommand()
 
   if (m_currentInputParts.size() != m_currentCommand->parts.size())
     return false;
-  if (std::find(m_currentInputPartsValidState.begin(), m_currentInputPartsValidState.end(), false) != m_currentInputPartsValidState.end())
+  if (std::ranges::find(m_currentInputPartsValidState, false) != m_currentInputPartsValidState.end())
     return false;
 
   // actually run the command
@@ -301,18 +267,10 @@ bool UniversalShortcutWindow::runSelectedCommand()
   return true;
 }
 
-
-
-namespace cse::extensions {
-
 UniversalShortcut::UniversalShortcut()
 {
   cse::keys::addGlobalySuppressedKeystroke(UniversalShortcut::KEYSTROKE);
   cse::keys::addGlobalKeyListener(std::make_shared<UniversalShortcutBringer>());
-}
-
-UniversalShortcut::~UniversalShortcut()
-{
 }
 
 }

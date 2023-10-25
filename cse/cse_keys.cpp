@@ -1,4 +1,6 @@
-#include "cse_internal.h"
+#define CSE_EXPOSE_INTERNALS
+#include "cse_keys.h"
+#undef CSE_EXPOSE_INTERNALS
 
 #include <thread>
 #include <vector>
@@ -7,8 +9,7 @@
 
 #include <Windows.h>
 
-#include <bitset>
-#include "graphics.h"
+#include "cse_utils.h"
 
 static struct KeyEventListener {
   std::thread listenerThread;
@@ -18,23 +19,27 @@ static struct KeyEventListener {
   std::vector<DWORD> pressedKeys;
   bool wantsNextClickCapture = false;
   std::mutex polledEventsMutex;
-} *globalKeyListener;
+} *g_globalKeyListener;
 
-static std::vector<GlobalKeystroke> suppressedKeystrokes;
-static std::vector<std::shared_ptr<GlobalKeyListener>> globalKeyListeners;
+static struct GlobalData
+{
+  std::vector<GlobalKeystroke>                    suppressedKeystrokes;
+  std::vector<std::shared_ptr<GlobalKeyListener>> globalKeyListeners;
+  CursorPosition                                  screenCursor;
+} *g_globalData;
 
-static struct MousePosition {
-  long cursorX, cursorY;
-  int virtualViewportWidth, virtualViewportHeight;
-} currentCursor;
+bool GlobalKeystroke::doesStrokeMatch(const GlobalKeyEvent &ev) const
+{
+  return keyCode == ev.keyCode && (keyFlags & ev.keyFlags) == keyFlags;
+}
 
-inline long long currentTimeMillis()
+static long long currentTimeMillis()
 {
   using namespace std::chrono;
   return duration_cast<milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
 }
 
-static bool processKey(KBDLLHOOKSTRUCT *keyEvent)
+static bool processKey(const KBDLLHOOKSTRUCT *keyEvent)
 {
   KeyFlags flags = 0;
   flags |= (keyEvent->flags & LLKHF_ALTDOWN) ? KeyFlags_Option  : 0;
@@ -43,33 +48,30 @@ static bool processKey(KBDLLHOOKSTRUCT *keyEvent)
   long long eventTime = currentTimeMillis(); // cannot use keyEvent->time because it is relative to when the computer booted
   GlobalKeyEvent ev{};
   bool pressed = !(keyEvent->flags & LLKHF_UP);
-  auto previousPressed = std::find(globalKeyListener->pressedKeys.begin(), globalKeyListener->pressedKeys.end(), keyEvent->vkCode);
-  bool wasPreviouslyPressed = previousPressed != globalKeyListener->pressedKeys.end();
+  auto previousPressed = std::ranges::find(g_globalKeyListener->pressedKeys, keyEvent->vkCode);
+  bool wasPreviouslyPressed = previousPressed != g_globalKeyListener->pressedKeys.end();
   ev.keyPress = !pressed ? PressType_Release : (wasPreviouslyPressed ? PressType_Repeat : PressType_Press);
-  ev.keyCode = (unsigned char)keyEvent->vkCode;
-  ev.scanCode = (unsigned char)keyEvent->scanCode;
+  ev.keyCode = static_cast<unsigned char>(keyEvent->vkCode);
+  ev.scanCode = static_cast<unsigned char>(keyEvent->scanCode);
   ev.keyFlags = flags;
   ev.pressTime = eventTime;
 
   if (pressed && !wasPreviouslyPressed)
-    globalKeyListener->pressedKeys.emplace_back(keyEvent->vkCode);
+    g_globalKeyListener->pressedKeys.emplace_back(keyEvent->vkCode);
   else if (!pressed && wasPreviouslyPressed)
-    globalKeyListener->pressedKeys.erase(previousPressed);
+    g_globalKeyListener->pressedKeys.erase(previousPressed);
 
   {
-    std::lock_guard _lock{ globalKeyListener->polledEventsMutex };
-    globalKeyListener->polledKeyEvents.push_back(ev);
+    std::lock_guard _lock{ g_globalKeyListener->polledEventsMutex };
+    g_globalKeyListener->polledKeyEvents.push_back(ev);
   }
 
   // return true iff the event must be suppressed
-  for (GlobalKeystroke &ks : suppressedKeystrokes) {
-    if (ks.match(ev))
-      return true;
-  }
-  return false;
+  return std::ranges::any_of(g_globalData->suppressedKeystrokes,
+    [&ev](const auto &stroke) { return stroke.doesStrokeMatch(ev); });
 }
 
-static bool processMouse(MSLLHOOKSTRUCT *mouseEvent, WPARAM eventWParam)
+static bool processMouse(const MSLLHOOKSTRUCT *mouseEvent, WPARAM eventWParam)
 {
   long long eventTime = currentTimeMillis(); // cannot use keyEvent->time because it is relative to when the computer booted
   GlobalButtonEvent ev{};
@@ -80,17 +82,17 @@ static bool processMouse(MSLLHOOKSTRUCT *mouseEvent, WPARAM eventWParam)
   ev.cursorX = mouseEvent->pt.x;
   ev.cursorY = mouseEvent->pt.y;
 
-  if (globalKeyListener->wantsNextClickCapture) {
-    std::lock_guard _lock{ globalKeyListener->polledEventsMutex };
-    globalKeyListener->nextClickCaptureCallback(ev);
-    globalKeyListener->nextClickCaptureCallback = [](const auto&) {}; // free closure arguments, may be slow?
-    globalKeyListener->wantsNextClickCapture = false;
+  if (g_globalKeyListener->wantsNextClickCapture) {
+    std::lock_guard _lock{ g_globalKeyListener->polledEventsMutex };
+    g_globalKeyListener->nextClickCaptureCallback(ev);
+    g_globalKeyListener->nextClickCaptureCallback = {}; // free closure arguments
+    g_globalKeyListener->wantsNextClickCapture = false;
     return true;
   }
 
   {
-    std::lock_guard _lock{ globalKeyListener->polledEventsMutex };
-    globalKeyListener->polledButtonEvents.push_back(ev);
+    std::lock_guard _lock{ g_globalKeyListener->polledEventsMutex };
+    g_globalKeyListener->polledButtonEvents.push_back(ev);
   }
 
   return false;
@@ -109,8 +111,8 @@ static LRESULT CALLBACK globalMouseHookProc(int code, WPARAM wParam, LPARAM lPar
     return CallNextHookEx(0, code, wParam, lParam);
   MSLLHOOKSTRUCT *mouseData = (MSLLHOOKSTRUCT *)lParam;
   if (wParam == WM_MOUSEMOVE) {
-    currentCursor.cursorX = mouseData->pt.x;
-    currentCursor.cursorY = mouseData->pt.y;
+    g_globalData->screenCursor.cursorX = mouseData->pt.x;
+    g_globalData->screenCursor.cursorY = mouseData->pt.y;
   }
   if (wParam == WM_LBUTTONDOWN || wParam == WM_LBUTTONUP || wParam == WM_RBUTTONDOWN || wParam == WM_RBUTTONUP) {
     if (processMouse(mouseData, wParam))
@@ -143,19 +145,19 @@ namespace cse::keys {
 
 void addGlobalySuppressedKeystroke(GlobalKeystroke keystroke)
 {
-  suppressedKeystrokes.push_back(keystroke);
+  g_globalData->suppressedKeystrokes.push_back(keystroke);
 }
 
 void addGlobalKeyListener(const std::shared_ptr<GlobalKeyListener> &listener)
 {
-  globalKeyListeners.push_back(listener);
+  g_globalData->globalKeyListeners.push_back(listener);
 }
 
 void captureNextClick(std::function<void(const GlobalButtonEvent&)> &&callback)
 {
-  std::lock_guard _lock{ globalKeyListener->polledEventsMutex };
-  globalKeyListener->nextClickCaptureCallback = std::move(callback);
-  globalKeyListener->wantsNextClickCapture = true;
+  std::lock_guard _lock{ g_globalKeyListener->polledEventsMutex };
+  g_globalKeyListener->nextClickCaptureCallback = std::move(callback);
+  g_globalKeyListener->wantsNextClickCapture = true;
 }
 
 void sendKeyImmediate(unsigned short scanCode, unsigned short vkCode)
@@ -185,8 +187,8 @@ void sendButton(const GlobalButtonEvent &btn)
 {
   INPUT input{};
   input.type = INPUT_MOUSE;
-  input.mi.dx = btn.cursorX * 65535 / currentCursor.virtualViewportWidth;
-  input.mi.dy = btn.cursorY * 65535 / currentCursor.virtualViewportHeight;
+  input.mi.dx = btn.cursorX * 65535 / g_globalData->screenCursor.virtualViewportWidth;
+  input.mi.dy = btn.cursorY * 65535 / g_globalData->screenCursor.virtualViewportHeight;
   input.mi.dwFlags |= MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK;
   input.mi.dwFlags |= btn.isPressed ? (btn.button == 0 ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_RIGHTDOWN) : (btn.button == 0 ? MOUSEEVENTF_LEFTUP : MOUSEEVENTF_RIGHTUP);
   SendInput(1, &input, sizeof INPUT);
@@ -195,57 +197,54 @@ void sendButton(const GlobalButtonEvent &btn)
 void prepareEventsDispatch()
 {
   SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-  currentCursor.virtualViewportWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-  currentCursor.virtualViewportHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+  g_globalData->screenCursor.virtualViewportWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+  g_globalData->screenCursor.virtualViewportHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 }
 
-long getScreenCursorX()
+CursorPosition getScreenCursor()
 {
-  return currentCursor.cursorX;
+  return g_globalData->screenCursor;
 }
 
-long getScreenCursorY()
+void loadResources()
 {
-  return currentCursor.cursorY;
+  g_globalData = new GlobalData;
 }
 
 void registerGlobalHook()
 {
-  globalKeyListener = new KeyEventListener{
+  g_globalKeyListener = new KeyEventListener{
     std::thread{ globalKeyListenerEntryPoint }
   };
 }
 
-void unregisterGlobalHook()
+void disposeHookAndResources()
 {
-  globalKeyListeners.clear();
+  delete g_globalData;
 
   // TODO find out how to properly terminate the global keys listener thread
   // currently the thread stops when the main function returns, whether it
   // was detached or not, that does not seem to be well-defined by the standard.
   // (but it is what we're aiming for)
-  
-  //std::terminate();
-  //delete globalKeysListenerThread;
 }
 
 void pollEvents()
 {
-  if (!globalKeyListener->polledEventsMutex.try_lock()) {
-    return; // if the mutex was busy return and try again on the next app frame (1/60th of a second does not matter much)
+  if (!g_globalKeyListener->polledEventsMutex.try_lock()) {
+    return; // if the mutex was busy return and try again on the next app frame (1 frame latency does not matter much)
   }
   // take ownership of the events list to release the mutex asap
   // the list is also cleared for immediate reuse
-  std::vector<GlobalKeyEvent> keyEvents = std::move(globalKeyListener->polledKeyEvents);
-  std::vector<GlobalButtonEvent> buttonEvents = std::move(globalKeyListener->polledButtonEvents);
-  globalKeyListener->polledEventsMutex.unlock();
+  std::vector<GlobalKeyEvent> keyEvents = std::move(g_globalKeyListener->polledKeyEvents);
+  std::vector<GlobalButtonEvent> buttonEvents = std::move(g_globalKeyListener->polledButtonEvents);
+  g_globalKeyListener->polledEventsMutex.unlock();
 
   for (GlobalKeyEvent &ev : keyEvents) {
-    for (auto &listener : globalKeyListeners)
+    for (auto &listener : g_globalData->globalKeyListeners)
       listener->onKeyPressed(ev);
   }
   for (GlobalButtonEvent &ev : buttonEvents) {
-    for (auto &listener : globalKeyListeners)
+    for (auto &listener : g_globalData->globalKeyListeners)
       listener->onButtonPressed(ev);
   }
 }

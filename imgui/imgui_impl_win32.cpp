@@ -870,8 +870,7 @@ WONDER_EDIT(
         *out_ex_style |= WS_EX_TOPMOST;
 }
 
-#include "../cse/graphics_spec.h" // not wrapped in a WONDER_EDIT because of macro expansion order but should be
-#include "../cse/cse.h"
+#include "../cse/cse.h" // not wrapped in a WONDER_EDIT because of macro expansion order but should be
 
 static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
 {
@@ -895,13 +894,6 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     vd->HwndOwned = true;
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = viewport->PlatformHandleRaw = vd->Hwnd;
-WONDER_EDIT(
-    /* dirty fix to enable alpha compositing on multi viewport windows */
-    if(graphics::window_helper::implDetails.nextImGuiViewportTransparent)
-      ImGui_ImplWin32_EnableAlphaCompositing(vd->Hwnd);
-    graphics::window_helper::implDetails.nextImGuiViewportTransparent = false;
-,
-)
 }
 
 static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)

@@ -1,15 +1,46 @@
 #include "recorded_commands.h"
 
-#include <iostream>
 #include <string>
 
 #include <Windows.h>
 
 namespace cse::extensions {
 
-static void addRawCommand(const char *cseCommand, const char *tooltip, const char *systemCommand)
+RecordedCommands::RecordedCommands()
 {
-  cse::addCommand({
+  addRawCommand("vscode",     "opens VScode",     "code");
+  addRawCommand("note",       "opens Notepad++",  R"(C:\Program Files (x86)\Notepad++\notepad++.exe)");
+  addShellCommand("python",   "python shell",     R"(C:\Windows\System32\cmd.exe)", "/c python");
+  addShellCommand("js",       "javascript shell", R"(C:\Windows\System32\cmd.exe)", "/c node");
+  addWebCommand("regex",      "Regex101 substitution and matching", "https://regex101.com/");
+  addWebCommand("excalidraw", "Excalidraw sketches and schema",     "https://excalidraw.com/");
+
+  cse::commands::addCommand({
+    "g",
+    "google search",
+    { std::make_shared<CommandTextPart>("search") },
+    runLater([](const auto &args) {
+      std::string url = "https://www.google.com/search?q=";
+      url += args[0];
+      ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    })
+  });
+  cse::commands::addCommand({
+    "g!",
+    "web search w/ immediate url",
+    { std::make_shared<CommandTextPart>("url") },
+    runLater([](const auto &args) {
+      std::string url{ args[0] };
+      if (!url.starts_with("http"))
+        url = "https://" + url;
+      ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    })
+  });
+}
+
+void RecordedCommands::addRawCommand(const char *cseCommand, const char *tooltip, const char *systemCommand)
+{
+  cse::commands::addCommand({
     cseCommand,
     tooltip,
     { /* no arguments */ },
@@ -20,9 +51,9 @@ static void addRawCommand(const char *cseCommand, const char *tooltip, const cha
   });
 }
 
-static void addShellCommand(const char *cseCommand, const char *tooltip, const char *executablePath, const char *arguments)
+void RecordedCommands::addShellCommand(const char *cseCommand, const char *tooltip, const char *executablePath, const char *arguments)
 {
-  cse::addCommand({
+  cse::commands::addCommand({
     cseCommand,
     tooltip,
     { /* no arguments */ },
@@ -33,34 +64,9 @@ static void addShellCommand(const char *cseCommand, const char *tooltip, const c
   });
 }
 
-static void addGoogleSearchCommands()
+void RecordedCommands::addWebCommand(const char *cseCommand, const char *tooltip, const char *url)
 {
-  cse::addCommand({
-    "g",
-    "google search",
-    { new CommandTextPart("search") },
-    runLater([](const auto &args) {
-      std::string url = "https://www.google.com/search?q=";
-      url += args[0];
-      ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
-    })
-  });
-  cse::addCommand({
-    "g!",
-    "web search w/ immediate url",
-    { new CommandTextPart("url") },
-    runLater([](const auto &args) {
-      std::string url{ args[0] };
-      if (!url.starts_with("http"))
-        url = "https://" + url;
-      ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
-    })
-  });
-}
-
-static void addWebCommand(const char *cseCommand, const char *tooltip, const char *url)
-{
-  cse::addCommand({
+  cse::commands::addCommand({
     cseCommand,
     tooltip,
     { /* no args */ },
@@ -68,20 +74,6 @@ static void addWebCommand(const char *cseCommand, const char *tooltip, const cha
       cse::extensions::openWebPage(url);
     })
   });
-}
-
-RecordedCommands::RecordedCommands()
-{
-  addRawCommand("vscode",   "open VScode",      "code");
-  addRawCommand("note",     "open Notepad++",   "C:\\Program Files\\Notepad++\\notepad++.exe");
-  addShellCommand("python", "python shell",     "C:\\Windows\\System32\\cmd.exe", "/c python");
-  addShellCommand("js",     "javascript shell", "C:\\Windows\\System32\\cmd.exe", "/c node");
-  addWebCommand("regex",    "Regex101 substitution and matching", "https://regex101.com/");
-  addGoogleSearchCommands();
-}
-
-RecordedCommands::~RecordedCommands()
-{
 }
 
 }

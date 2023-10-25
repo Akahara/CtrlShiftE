@@ -2,19 +2,15 @@
 
 #include <vector>
 #include <string>
-#include <iostream>
 
-static std::vector<const char*> logLines;
+namespace cse::extensions
+{
+
+std::vector<std::string> DebugWindowProcess::s_logLines;
 
 DebugWindowProcess::DebugWindowProcess()
   : WindowProcess("CtrlShiftE.Logs")
 {
-}
-
-bool DebugWindowProcess::beginWindow()
-{
-  graphics::window_helper::prepareAlwaysOnTop();
-  return WindowProcess::beginWindow();
 }
 
 void DebugWindowProcess::render()
@@ -24,16 +20,16 @@ void DebugWindowProcess::render()
   constexpr ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersV;
 
   ImVec2 outer_size = ImVec2(0.0f, 0.f);
-  if (ImGui::BeginTable(tableName, 1, flags, outer_size)) {
+  if (ImGui::BeginTable("Logs", 1, flags, outer_size)) {
 
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn(tableName, ImGuiTableColumnFlags_NoHeaderLabel);
+    ImGui::TableSetupColumn("Logs", ImGuiTableColumnFlags_NoHeaderLabel);
     ImGui::TableHeadersRow();
 
-    for (const char *line : logLines) {
+    for (std::string &line : s_logLines) {
       ImGui::TableNextRow();
       ImGui::TableSetColumnIndex(0);
-      ImGui::Text(line);
+      ImGui::TextUnformatted(line.c_str());
     }
 
     if (m_autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
@@ -44,9 +40,8 @@ void DebugWindowProcess::render()
 
 void DebugWindowProcess::log(std::string_view line)
 {
-  char *copy = new char[line.length()+1];
-  line.copy(copy, line.length());
-  copy[line.length()] = '\0';
-  logLines.push_back(copy);
-  // TODO clear logLines somewhere/somewhen
+  if (s_logLines.size() > 1000) s_logLines.resize(500);
+  s_logLines.push_back(std::string(line));
+}
+
 }
