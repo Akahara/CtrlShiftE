@@ -1,6 +1,8 @@
 #pragma once
 
-#include "universal_shortcut.h"
+#include <unordered_set>
+#include <array>
+
 #include "../cse.h"
 
 namespace cse::extensions {
@@ -35,8 +37,27 @@ public:
   void onButtonPressed(const GlobalButtonEvent &ev) override {}
 };
 
+struct ActiveKeyStroke {
+  unsigned char keyCode, scanCode;
+};
+
+struct ActiveKeyStrokeHash {
+  size_t operator()(const ActiveKeyStroke &stroke) const noexcept
+  {
+    return stroke.keyCode | (stroke.scanCode << sizeof(stroke.keyCode));
+  }
+};
+
+inline bool operator==(const ActiveKeyStroke &k1, const ActiveKeyStroke &k2)
+{
+  return k1.keyCode == k2.keyCode && k1.scanCode == k2.scanCode;
+}
+
 class KeyRecorder : public GlobalKeyListener {
 public:
+  explicit KeyRecorder(std::unordered_set<ActiveKeyStroke, ActiveKeyStrokeHash> *activeKeys)
+    : m_activeKeys(activeKeys) {}
+
   void startRecording(const std::string &recordName);
   void playRecord() const;
 
@@ -46,11 +67,30 @@ public:
 private:
   std::vector<std::unique_ptr<RepeatableInputEvent>> m_recording;
   std::string m_recordName;
+  std::unordered_set<ActiveKeyStroke, ActiveKeyStrokeHash> *m_activeKeys;
+};
+
+class KeysUtilityWindow : public WindowProcess
+{
+public:
+  explicit KeysUtilityWindow(const std::unordered_set<ActiveKeyStroke, ActiveKeyStrokeHash> *activeKeys);
+
+  void render() override;
+
+private:
+  using KeyName = std::array<char, 16>;
+  const std::unordered_set<ActiveKeyStroke, ActiveKeyStrokeHash> *m_activeKeys;
+  std::unordered_map<unsigned char, KeyName>                      m_keynames;
 };
 
 class KeySwaps : public CSEExtension {
 public:
-	KeySwaps();
+  static constexpr const char *EXTENSION_NAME = "Key Swaps";
+
+  KeySwaps();
+
+private:
+  std::unordered_set<ActiveKeyStroke, ActiveKeyStrokeHash> m_activeKeys;
 };
 
 }

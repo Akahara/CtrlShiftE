@@ -15,6 +15,7 @@
 #include "extensions/tables.h"
 #include "extensions/gotodir.h"
 #include "extensions/keyswaps.h"
+#include "extensions/startup_commands.h"
 
 static std::vector<std::unique_ptr<CSEExtension>> s_activeExtensions;
 
@@ -23,16 +24,24 @@ static void reloadExtensions()
   std::ranges::for_each(s_activeExtensions, [](auto &ext) { ext->reload(); });
 }
 
+template<class Ext> requires std::derived_from<Ext, CSEExtension>
+static void loadExtension()
+{
+  cse::logm("Loading extension ", Ext::EXTENSION_NAME);
+  s_activeExtensions.emplace_back(std::make_unique<Ext>());
+}
+
 static void loadDefaultExtensions()
 {
-  s_activeExtensions.emplace_back(std::make_unique<cse::extensions::UniversalShortcut>());
-  s_activeExtensions.emplace_back(std::make_unique<cse::extensions::TimeRecorder>());
-  s_activeExtensions.emplace_back(std::make_unique<cse::extensions::KeyStatsRecorder>());
-  s_activeExtensions.emplace_back(std::make_unique<cse::extensions::RecordedCommands>());
-  s_activeExtensions.emplace_back(std::make_unique<cse::extensions::ColorPicker>());
-  s_activeExtensions.emplace_back(std::make_unique<cse::extensions::Tables>());
-  s_activeExtensions.emplace_back(std::make_unique<cse::extensions::GotoDir>());
-  s_activeExtensions.emplace_back(std::make_unique<cse::extensions::KeySwaps>());
+  loadExtension<cse::extensions::UniversalShortcut>();
+  loadExtension<cse::extensions::TimeRecorder>();
+  loadExtension<cse::extensions::KeyStatsRecorder>();
+  loadExtension<cse::extensions::RecordedCommands>();
+  loadExtension<cse::extensions::ColorPicker>();
+  loadExtension<cse::extensions::Tables>();
+  loadExtension<cse::extensions::GotoDir>();
+  loadExtension<cse::extensions::KeySwaps>();
+  loadExtension<cse::extensions::StartupCommands>();
 
   cse::commands::addCommand({
     "reload",

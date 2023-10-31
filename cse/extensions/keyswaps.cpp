@@ -1,9 +1,12 @@
 #include "keyswaps.h"
 
+#include "color_picker.h"
 #include "universal_shortcut.h"
+#include "../../imgui/imgui_internal.h"
 
 namespace cse::extensions
 {
+
 void RepeatableKeyboardEvent::send()
 {
   GlobalKeyEvent ev{};
@@ -48,6 +51,12 @@ void KeyRecorder::playRecord() const
 
 void KeyRecorder::onKeyPressed(const GlobalKeyEvent& ev)
 {
+  ActiveKeyStroke stroke{ ev.keyCode, ev.scanCode };
+  if (ev.keyPress == PressType_Press)
+    m_activeKeys->insert(stroke);
+  else if(ev.keyPress == PressType_Release)
+    m_activeKeys->erase(stroke);
+
   if (UniversalShortcut::KEYSTROKE.doesStrokeMatch(ev)) {
     auto e = std::find_if(m_recording.rbegin(), m_recording.rend(), [](const auto &ev) { return ev->canEndMacroSequence(); });
     m_recording.erase(e.base(), m_recording.end());
@@ -73,12 +82,45 @@ void KeyRecorder::onButtonPressed(const GlobalButtonEvent& ev)
   }
 }
 
+KeysUtilityWindow::KeysUtilityWindow(const std::unordered_set<ActiveKeyStroke, ActiveKeyStrokeHash> *activeKeys)
+  : WindowProcess("Keys")
+  , m_activeKeys(activeKeys)
+{
+}
+
+void KeysUtilityWindow::render()
+{
+  ImGui::BeginTable("", 3);
+  auto column = [](const char *text) { ImGui::TableSetupColumn(text, ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize(text).x); };
+  column("ScanCode");
+  column("KeyCode");
+  column("KeyName\n(layout dependent)");
+  ImGui::TableHeadersRow();
+  for(const ActiveKeyStroke &stroke : *m_activeKeys)
+  {
+    if(!m_keynames.contains(stroke.scanCode))
+    {
+      KeyName nameBuf;
+      if(!GetKeyNameTextA(stroke.scanCode << 16, nameBuf.data(), static_cast<int>(nameBuf.size())))
+        std::ranges::copy("unknown", nameBuf.data());
+      m_keynames.emplace(stroke.scanCode, nameBuf);
+    }
+    ImGui::TableNextRow();
+    ImGui::TableSetColumnIndex(0);
+    ImGui::Text("%d", stroke.scanCode);
+    ImGui::TableSetColumnIndex(1);
+    ImGui::Text("%d", stroke.keyCode);
+    ImGui::TableSetColumnIndex(2);
+    ImGui::TextUnformatted(m_keynames[stroke.scanCode].data());
+  }
+  ImGui::EndTable();
+}
+
 KeySwaps::KeySwaps()
 {
   cse::keys::addGlobalySuppressedKeystroke(KeySwap::KEYSTROKE_GREATER_OR_LESS);
   cse::keys::addGlobalKeyListener(std::make_shared<KeySwap>());
-
-  auto recorder = std::make_shared<KeyRecorder>();
+  cse::keys::addGlobalKeyListener(std::make_shared<KeyRecorder>(&m_activeKeys));
 
 #if 0 // TODO not quite ready yet, macro save files are not implemented and mouse inputs are wanky
   Command recordCmd{
@@ -98,6 +140,13 @@ KeySwaps::KeySwaps()
   cse::addCommand(std::move(playCmd));
   cse::addCommand(std::move(recordCmd));
 #endif
+
+  cse::commands::addCommand({
+    "keys",
+    "see keycodes and scancodes",
+    { /* no parameters */ },
+    [this](auto &parts) { cse::graphics::createWindow(std::make_shared<KeysUtilityWindow>(&m_activeKeys)); }
+  });
 }
 
 }

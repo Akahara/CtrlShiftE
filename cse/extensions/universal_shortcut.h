@@ -40,6 +40,7 @@ private:
 
 class UniversalShortcut : public CSEExtension {
 public:
+  static constexpr const char *EXTENSION_NAME = "Universal Shortcut";
   static constexpr GlobalKeystroke KEYSTROKE{ 'E', KeyFlags_Ctrl | KeyFlags_Shift };
 
   UniversalShortcut();

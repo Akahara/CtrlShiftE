@@ -9,6 +9,8 @@ namespace cse::extensions {
 
 class ColorPicker : public CSEExtension {
 public:
+  static constexpr const char *EXTENSION_NAME = "Color Picker";
+
   ColorPicker();
 };
 

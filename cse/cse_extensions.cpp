@@ -2,6 +2,7 @@
 #include "cse_extensions.h"
 #undef CSE_EXPOSE_INTERNALS
 
+#include <fstream>
 #include <Windows.h>
 
 namespace cse::extensions {
@@ -25,6 +26,16 @@ const fs::path &getUserFilesPath()
   return path;
 }
 
+fs::path getUserConfigFilePath(const char *fileName, const char *defaultFileContents)
+{
+  fs::path path = getUserFilesPath() / fileName;
+  if (!fs::is_regular_file(path)) {
+    std::ofstream file{ path };
+    file << defaultFileContents << std::endl;
+  }
+  return path;
+}
+
 Executor runLater(Executor executor)
 {
   return [executor](const auto &args) {
@@ -33,6 +44,14 @@ Executor runLater(Executor executor)
     });
     _launcher.detach();
   };
+}
+
+void runDetached(std::function<void()> &&call)
+{
+  std::thread _launcher([call=std::move(call)] {
+    call();
+  });
+  _launcher.detach();
 }
 
 void openWebPage(const char *url)
@@ -45,6 +64,16 @@ void openFileDir(const char *path)
 {
   cse::log("Opening directory " + std::string(path));
   ShellExecuteA(NULL, "explore", path, NULL, NULL, SW_SHOWNORMAL);
+}
+
+void executeShellCommand(const char* cmd)
+{
+  cse::logm("Unimplemented executeShellCommand(", cmd, ")");
+  //SHELLEXECUTEINFOA info;
+  //ZeroMemory(&info, sizeof(info));
+  //info.cbSize = sizeof(SHELLEXECUTEINFOA);
+  //info.fMask = SEE_MASK_NO_CONSOLE;
+  //ShellExecuteExA(&info);
 }
 
 }

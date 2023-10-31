@@ -51,6 +51,8 @@ private:
 
 class KeyStatsRecorder : public CSEExtension {
 public:
+  static constexpr const char *EXTENSION_NAME = "Key Stats Recorder";
+
   KeyStatsRecorder();
 };
 

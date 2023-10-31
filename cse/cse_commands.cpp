@@ -103,6 +103,38 @@ void addCommand(Command &&command)
   iotGenerators.push_back(std::move(command));
 }
 
+bool executeCommand(const std::string &cmd)
+{
+  size_t split = 0;
+  std::string_view part;
+  auto nextPart = [&]
+  {
+    size_t previousSplit = split;
+    if (split >= cmd.length()) return false;
+    split = cmd.find(' ', split);
+    if (split == std::string::npos) split = cmd.length();
+    part = std::string_view(cmd.data() + previousSplit, split - previousSplit);
+    split++;
+    return true;
+  };
+
+  if (!nextPart()) return false;
+  auto commandIt = std::ranges::find_if(iotGenerators, [&](const Command &command) { return command.prefix == part; });
+  if (commandIt == iotGenerators.end()) return false;
+  Command &command = *commandIt;
+  std::vector<std::string_view> arguments;
+  for(auto &cmdpart : command.parts)
+  {
+    if (!nextPart()) return false;
+    if (!cmdpart->isGood(part)) return false;
+    arguments.push_back(part);
+  }
+  if (nextPart()) return false;
+
+  command.executor(arguments);
+  return true;
+}
+
 std::vector<Command> &getCommands()
 {
   return iotGenerators;

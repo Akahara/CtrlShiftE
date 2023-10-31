@@ -48,6 +48,8 @@ private:
 
 class Tables : public CSEExtension {
 public:
+  static constexpr const char *EXTENSION_NAME = "Tables";
+
   Tables();
 
 private:

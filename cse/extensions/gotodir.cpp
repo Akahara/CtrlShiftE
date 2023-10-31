@@ -5,29 +5,18 @@
 
 namespace cse::extensions {
 
-namespace fs = std::filesystem;
-
-static std::vector<std::string> s_dirnames;
-static std::vector<fs::path> s_dirpaths;
-static std::shared_ptr<CommandEnumPart> s_directoryNameInput;
-
-static fs::path getSettingsFile()
+fs::path GotoDir::getSettingsFile()
 {
-  fs::path path = cse::extensions::getUserFilesPath() / "cd.txt";
-  if (!fs::is_regular_file(path)) {
-    std::ofstream file{ path };
-    file 
-      << "# You can put directory shortcuts here\n"
-      << "# for example the following line adds a shortcut named 'foo' to the 'C:\\foo\\bar directory\n"
-      << "# foo C:\\foo\\bar\n"
-      << "# if 'bar' is a file its parent directory will be opened instead\n"
-      << "# when editing this file run 'reload' from CSE to apply changes\n"
-      << "cd " << path.string() << std::endl;
-  }
-  return path;
+  return cse::extensions::getUserConfigFilePath("cd.txt", (
+    "# You can put directory shortcuts here\n"
+    "# for example the following line adds a shortcut named 'foo' to the 'C:\\foo\\bar directory\n"
+    "# foo C:\\foo\\bar\n"
+    "# if 'bar' is a file its parent directory will be opened instead\n"
+    "# when editing this file run 'reload' from CSE to apply changes\n"
+    "cd " + (cse::extensions::getUserFilesPath() / "cd.txt").string()).c_str());
 }
 
-static void loadDirPaths()
+void GotoDir::loadDirPaths()
 {
   std::ifstream file{ getSettingsFile() };
   char lineBuf[256];
@@ -39,17 +28,17 @@ static void loadDirPaths()
       continue;
     std::string dirname = line.substr(0, split);
     std::string dirpath = line.substr(split + 1);
-    auto existingIdx = std::ranges::find(s_dirnames, dirname);
-    if (existingIdx != s_dirnames.end()) {
-      s_dirpaths[existingIdx - s_dirnames.begin()] = dirpath; // replace existing
+    auto existingIdx = std::ranges::find(m_dirnames, dirname);
+    if (existingIdx != m_dirnames.end()) {
+      m_dirpaths[existingIdx - m_dirnames.begin()] = dirpath; // replace existing
     } else {
-      s_dirnames.push_back(dirname);
-      s_dirpaths.emplace_back(dirpath);
+      m_dirnames.push_back(dirname);
+      m_dirpaths.emplace_back(dirpath);
     }
   }
 }
 
-static void addDirPath(std::string_view name, std::string_view path)
+void GotoDir::addDirPath(std::string_view name, std::string_view path)
 {
   std::ofstream file{ getSettingsFile(), std::ios_base::app };
   file << name << ' ' << path << std::endl;
@@ -62,11 +51,11 @@ GotoDir::GotoDir()
   cse::commands::addCommand({
     "cd",
     "open a directory shortcut",
-    { s_directoryNameInput = std::make_shared<CommandEnumPart>("dirname", s_dirnames) },
-    [](const auto &args) {
-      auto idx = std::find(s_dirnames.begin(), s_dirnames.end(), args[0]);
-      assert(idx != s_dirnames.end());
-      fs::path path = s_dirpaths[idx - s_dirnames.begin()];
+    { m_directoryNameInput = std::make_shared<CommandEnumPart>("dirname", m_dirnames) },
+    [this](const auto &args) {
+      auto idx = std::find(m_dirnames.begin(), m_dirnames.end(), args[0]);
+      assert(idx != m_dirnames.end());
+      fs::path path = m_dirpaths[idx - m_dirnames.begin()];
       if (fs::is_regular_file(path))
         path = path.parent_path();
       cse::extensions::openFileDir(path.string().c_str());
@@ -88,10 +77,10 @@ GotoDir::GotoDir()
 
 void GotoDir::reload()
 {
-  s_dirnames.clear();
-  s_dirpaths.clear();
+  m_dirnames.clear();
+  m_dirpaths.clear();
   loadDirPaths();
-  s_directoryNameInput->setParts(s_dirnames);
+  m_directoryNameInput->setParts(m_dirnames);
 }
 
 }

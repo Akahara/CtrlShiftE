@@ -8,6 +8,8 @@ namespace fs = std::filesystem;
 
 class TimeRecorder : public CSEExtension {
 public:
+  static constexpr const char *EXTENSION_NAME = "Time Recorder";
+
   TimeRecorder();
   ~TimeRecorder() override;
 

@@ -81,6 +81,7 @@ namespace cse::commands
 {
 
 void addCommand(Command &&command);
+bool executeCommand(const std::string &cmd);
 
 #ifdef CSE_EXPOSE_INTERNALS
 std::vector<Command> &getCommands();

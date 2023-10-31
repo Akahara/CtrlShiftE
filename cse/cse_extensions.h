@@ -24,9 +24,13 @@ namespace cse::extensions
 {
 
 const fs::path &getUserFilesPath();
+fs::path getUserConfigFilePath(const char *fileName, const char *defaultFileContents);
 
-// run in separate thread to avoid stalling the main thread until the command starts
+
+// adapts a command executor to run in separate thread to avoid stalling the main thread until the command starts
 Executor runLater(Executor executor);
+// run in separate thread to avoid stalling the main thread until the command starts
+void runDetached(std::function<void()> &&call);
 
 /*
  * Utility function that opens a web browser to the given url.
@@ -37,6 +41,10 @@ Executor runLater(Executor executor);
  * is undefined.
  */
 void openWebPage(const char *url);
+/*
+ * Opens the given file path in an new windows explorer window.
+ */
 void openFileDir(const char *path);
+void executeShellCommand(const char *cmd);
 
 }

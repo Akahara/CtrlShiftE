@@ -6,6 +6,8 @@ namespace cse::extensions {
 
 class RecordedCommands : public CSEExtension {
 public:
+  static constexpr const char *EXTENSION_NAME = "Recorded Commands";
+
   RecordedCommands();
 
   static void addRawCommand(const char *cseCommand, const char *tooltip, const char *systemCommand);
