@@ -102,11 +102,11 @@ void ColorPickerWindow::refreshFormattedColors(bool extended)
   if (m_color[3] == 1.f) {
     sprintf_s(m_rgbText, "%s%.3f, %.3f, %.3f%s", extended ? "rgb(" : "", r, g, b, extended ? ")" : "");
     sprintf_s(m_rgbIntText, "%s%3d,%4d,%4d%s", extended ? "rgb(" : "", ri, gi, bi, extended ? ")" : "");
-    sprintf_s(m_hexText, "#%02x%02x%02x", ri, gi, bi);
+    sprintf_s(m_hexText, "%s%02x%02x%02x", extended ? "0x" : "#", ri, gi, bi);
   } else {
     sprintf_s(m_rgbText, "%s%.3f, %.3f, %.3f, %.3f%s", extended ? "rgba(" : "", r, g, b, a, extended ? ")" : "");
     sprintf_s(m_rgbIntText, "%s%3d,%4d,%4d,%4d%s", extended ? "rgba(" : "", ri, gi, bi, ai, extended ? ")" : "");
-    sprintf_s(m_hexText, "#%02x%02x%02x%02x", ri, gi, bi, ai);
+    sprintf_s(m_hexText, "%s%02x%02x%02x%02x", extended ? "0x" : "#", ri, gi, bi, ai);
   }
 }
 

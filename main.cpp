@@ -15,7 +15,9 @@
 #include "extensions/tables.h"
 #include "extensions/gotodir.h"
 #include "extensions/keyswaps.h"
+#include "extensions/numbers.h"
 #include "extensions/startup_commands.h"
+#include "extensions/expressions/expressions.h"
 
 static std::vector<std::unique_ptr<CSEExtension>> s_activeExtensions;
 
@@ -42,6 +44,7 @@ static void loadDefaultExtensions()
   loadExtension<cse::extensions::GotoDir>();
   loadExtension<cse::extensions::KeySwaps>();
   loadExtension<cse::extensions::StartupCommands>();
+  loadExtension<cse::extensions::Numbers>();
 
   cse::commands::addCommand({
     "reload",
@@ -81,6 +84,14 @@ static void unloadExtensions()
 INT WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
                    _In_ PSTR lpCmdLine, _In_ INT nCmdShow)
 {
+  expressions::LexingContext lex{ "8+2*x<<2" };
+  expressions::ParsingContext parse{ expressions::lex(lex), lex.line };
+  auto exp = expressions::parse(parse);
+  expressions::EvaluationContext eval{};
+  eval.variables.emplace("x", 4);
+  auto x = exp->eval(eval);
+
+
   cse::graphics::loadGraphics();
   cse::keys::loadResources();
   loadDefaultExtensions();
