@@ -27,10 +27,14 @@ const fs::path &getUserFilesPath();
 fs::path getUserConfigFilePath(const char *fileName, const char *defaultFileContents);
 
 
-// adapts a command executor to run in separate thread to avoid stalling the main thread until the command starts
-Executor runLater(Executor executor);
+// run in between frames, when no extensions are active, to avoid stalling the main thread during display (still synchronous, use with care)
+void runLater(std::function<void()> &&executor);
 // run in separate thread to avoid stalling the main thread until the command starts
 void runDetached(std::function<void()> &&call);
+
+#ifdef CSE_EXPOSE_INTERNALS
+void runDelayedTasks();
+#endif
 
 /*
  * Utility function that opens a web browser to the given url.
@@ -45,6 +49,6 @@ void openWebPage(const char *url);
  * Opens the given file path in an new windows explorer window.
  */
 void openFileDir(const char *path);
-void executeShellCommand(const char *cmd);
+void executeShellCommand(const std::string &command, bool interactive=false);
 
 }

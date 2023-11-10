@@ -8,6 +8,7 @@
 namespace cse::extensions {
 
 static const fs::path USER_FILES_DIR = ".CtrlShiftE";
+static std::vector<std::function<void()>> s_delayedTasks;
 
 const fs::path &getUserFilesPath()
 {
@@ -36,14 +37,9 @@ fs::path getUserConfigFilePath(const char *fileName, const char *defaultFileCont
   return path;
 }
 
-Executor runLater(Executor executor)
+void runLater(std::function<void()> &&executor)
 {
-  return [executor](const auto &args) {
-    std::thread _launcher([executor, &args] {
-      executor(args);
-    });
-    _launcher.detach();
-  };
+  s_delayedTasks.push_back(executor);
 }
 
 void runDetached(std::function<void()> &&call)
@@ -52,6 +48,13 @@ void runDetached(std::function<void()> &&call)
     call();
   });
   _launcher.detach();
+}
+
+void runDelayedTasks()
+{
+  for (size_t i = 0; i < s_delayedTasks.size(); i++)
+    s_delayedTasks[i]();
+  s_delayedTasks.clear();
 }
 
 void openWebPage(const char *url)
@@ -66,14 +69,35 @@ void openFileDir(const char *path)
   ShellExecuteA(NULL, "explore", path, NULL, NULL, SW_SHOWNORMAL);
 }
 
-void executeShellCommand(const char* cmd)
+void executeShellCommand(const std::string &command, bool interactive/*=false*/)
 {
-  cse::logm("Unimplemented executeShellCommand(", cmd, ")");
-  //SHELLEXECUTEINFOA info;
-  //ZeroMemory(&info, sizeof(info));
-  //info.cbSize = sizeof(SHELLEXECUTEINFOA);
-  //info.fMask = SEE_MASK_NO_CONSOLE;
-  //ShellExecuteExA(&info);
+  if (command.empty()) {
+    log("Tried to execute an empty command");
+    return;
+  }
+  std::string file;
+  std::string params;
+  if(command[0] == '"') {
+    size_t split = command.find('"');
+    if(split == std::string::npos) {
+      logm("Invalid shell command: ", command);
+      return;
+    }
+    file = command.substr(1, split);
+    split++;
+    while (split < command.size() && command[split] == ' ')
+      split++;
+    params = command.substr(split);
+  } else {
+    size_t split = command.find(' ');
+    file = command.substr(0, split);
+    if (split != std::string::npos)
+      params = command.substr(split+1);
+  }
+
+  auto success = ShellExecuteA(NULL, "open", file.c_str(), params.c_str(), NULL, interactive ? SW_SHOWNORMAL : SW_HIDE);
+  logm("Executed shell command '", file, "' with params '", params, "'",
+       interactive ? " (interactive)" : "", ", got ", std::to_string(reinterpret_cast<long long>(success)));
 }
 
 }

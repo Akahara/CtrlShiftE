@@ -39,7 +39,7 @@ public:
 
   void getCompletions(std::string_view part, std::vector<CommandCompletion> &out_completions) const override;
   bool isGood(std::string_view part) const override;
-  void setParts(const std::vector<std::string> &parts) { m_parts = parts; /* note the copy */ }
+  void setParts(const std::vector<std::string> &parts) { m_parts = parts; }
 
 private:
   std::vector<std::string> m_parts;
@@ -81,6 +81,8 @@ namespace cse::commands
 {
 
 void addCommand(Command &&command);
+bool hasCommand(const std::string &prefix);
+void removeCommand(const std::string &prefix);
 bool executeCommand(const std::string &cmd);
 
 #ifdef CSE_EXPOSE_INTERNALS

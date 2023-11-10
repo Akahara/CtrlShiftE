@@ -5,6 +5,8 @@
 #include <fstream>
 #include <chrono>
 
+using namespace std::chrono_literals;
+
 namespace cse::extensions {
 
 TimeRecorder::TimeRecorder()
@@ -25,18 +27,17 @@ TimeRecorder::TimeRecorder()
 
 TimeRecorder::~TimeRecorder()
 {
-  std::time_t endTime = std::time(nullptr);
   for (auto &[recordName, beginTime] : m_activeRecords)
-    saveRecord(recordName, beginTime, endTime);
+    saveRecord(recordName, beginTime, clock::now());
 }
 
-const char *TimeRecorder::formatDuration(std::time_t from, std::time_t to)
+const char *TimeRecorder::formatDuration(const time_point &from, const time_point &to)
 {
   static char formatted[50];
-  double seconds = difftime(to, from);
-  int secs = static_cast<int>(seconds) % 60;
-  int minutes = static_cast<int>(seconds / 60) % 60;
-  int hours = static_cast<int>(seconds / 60 / 60);
+  int seconds = static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(from - to).count());
+  int secs    = seconds % 60;
+  int minutes = seconds / 60 % 60;
+  int hours   = seconds / 60 / 60;
   sprintf_s(formatted, "%02dh%02dm%02ds", hours, minutes, secs);
   return formatted;
 }
@@ -69,12 +70,12 @@ bool TimeRecorder::toggleRecording(const std::string &record)
   size_t recordActiveIndex = getActiveRecordIndex(record);
   if (recordActiveIndex == -1) {
     cse::log("Starting record for " + record);
-    m_activeRecords.push_back(std::make_pair(record, std::time(nullptr)));
+    m_activeRecords.emplace_back(record, clock::now());
     openRecordFile(record); // create the file
     return true;
   } else {
-    std::time_t beginTime = m_activeRecords[recordActiveIndex].second;
-    std::time_t endTime = std::time(nullptr);
+    const time_point &beginTime = m_activeRecords[recordActiveIndex].second;
+    time_point endTime = clock::now();
     cse::log("Finished record for " + record + " lasted for " + formatDuration(beginTime, endTime));
     saveRecord(record, beginTime, endTime);
     m_activeRecords.erase(m_activeRecords.begin() + recordActiveIndex);
@@ -82,14 +83,17 @@ bool TimeRecorder::toggleRecording(const std::string &record)
   }
 }
 
-void TimeRecorder::saveRecord(const std::string &recordName, std::time_t beginTime, std::time_t endTime)
+void TimeRecorder::saveRecord(const std::string &recordName, const time_point &beginTime, const time_point &endTime)
 {
   std::ofstream recordFile = openRecordFile(recordName);
+  auto now = std::chrono::system_clock::now();
+  time_t beginTimeT = clock::to_time_t(beginTime);
+  time_t endTimeT = clock::to_time_t(endTime);
   std::tm beginDate;
   std::tm endDate;
-  double secondsDiff = difftime(endTime, beginTime);
-  localtime_s(&beginDate, &beginTime);
-  localtime_s(&endDate, &endTime);
+  localtime_s(&beginDate, &beginTimeT);
+  localtime_s(&endDate, &endTimeT);
+  double secondsDiff = difftime(endTimeT, beginTimeT);
   recordFile
     << (beginDate.tm_year + 1900) << "."
     << (beginDate.tm_mon + 1) << "."
@@ -142,7 +146,7 @@ void RecordsWindow::render()
   ImGui::NewLine();
   if (ImGui::InputText("new record", m_newRecordName, sizeof(m_newRecordName), ImGuiInputTextFlags_EnterReturnsTrue)) {
     std::string record = m_newRecordName;
-    auto rc = std::find_if(m_records.begin(), m_records.end(), [&](PlayingRecord &rc) { return rc.record == record; });
+    auto rc = std::ranges::find_if(m_records, [&](const PlayingRecord &rc) { return rc.record == record; });
     PlayingRecord *updatedRecord;
     if (rc == m_records.end()) {
       m_records.push_back({ record, true });
@@ -151,8 +155,24 @@ void RecordsWindow::render()
       updatedRecord = &*rc;
     }
     updatedRecord->active = m_recorder->toggleRecording(record);
-    std::fill(std::begin(m_newRecordName), std::end(m_newRecordName), '\0');
+    std::ranges::fill(m_newRecordName, '\0');
   }
+  ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(117, 184, 83, 255));
+  if (ImGui::Button("+1h"   )) addFixedTimeToActiveRecords(1h);    ImGui::SameLine(0,4);
+  if (ImGui::Button("+30min")) addFixedTimeToActiveRecords(30min); ImGui::SameLine(0,4);
+  if (ImGui::Button("+15min")) addFixedTimeToActiveRecords(15min); ImGui::SameLine(0,4);
+  ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(184, 103, 83, 255));
+  if (ImGui::Button("-30min")) addFixedTimeToActiveRecords(-30min); ImGui::SameLine(0,4);
+  if (ImGui::Button("-15min")) addFixedTimeToActiveRecords(-15min); ImGui::SameLine(0,4);
+  ImGui::PopStyleColor(2);
 }
 
+void RecordsWindow::addFixedTimeToActiveRecords(const TimeRecorder::clock::duration &fixedDuration) const
+{
+  auto current = TimeRecorder::clock::now();
+  for (const auto &[record, active] : m_records) {
+    if (active)
+      m_recorder->saveRecord(record, current - fixedDuration, current);
+  }
+}
 }

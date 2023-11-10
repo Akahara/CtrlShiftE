@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 #include "cse.h"
 
 namespace cse::extensions {
@@ -8,25 +10,28 @@ namespace fs = std::filesystem;
 
 class TimeRecorder : public CSEExtension {
 public:
+  using clock = std::chrono::system_clock;
+  using time_point = clock::time_point;
+
   static constexpr const char *EXTENSION_NAME = "Time Recorder";
 
   TimeRecorder();
   ~TimeRecorder() override;
 
   static fs::path getRecordsPath();
-  static const char *formatDuration(std::time_t from, std::time_t to);
-  static void saveRecord(const std::string &recordName, std::time_t beginTime, std::time_t endTime);
+  static const char *formatDuration(const time_point &from, const time_point &to);
+  static void saveRecord(const std::string &recordName, const time_point &beginTime, const time_point &endTime);
   static std::ofstream openRecordFile(const std::string &recordName);
   bool toggleRecording(const std::string &record);
   size_t getActiveRecordIndex(const std::string &recordName) const;
 
 private:
-  std::vector<std::pair<std::string, std::time_t>> m_activeRecords;
+  std::vector<std::pair<std::string, time_point>> m_activeRecords;
 };
 
 class RecordsWindow : public WindowProcess {
 public:
-  RecordsWindow(TimeRecorder *recorder);
+  explicit RecordsWindow(TimeRecorder *recorder);
 
 private:
   struct PlayingRecord {
@@ -36,6 +41,8 @@ private:
 
   bool beginWindow() override;
   void render() override;
+
+  void addFixedTimeToActiveRecords(const TimeRecorder::clock::duration &duration) const;
 
   const ImU32 m_basicButtonColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Button]);
   const ImU32 m_basicFocusedButtonColor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);

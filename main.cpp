@@ -10,7 +10,6 @@
 #include "extensions/key_stats_recorder.h"
 #include "extensions/time_recorder.h"
 #include "extensions/universal_shortcut.h"
-#include "extensions/recorded_commands.h"
 #include "extensions/color_picker.h"
 #include "extensions/tables.h"
 #include "extensions/gotodir.h"
@@ -38,7 +37,6 @@ static void loadDefaultExtensions()
   loadExtension<cse::extensions::UniversalShortcut>();
   loadExtension<cse::extensions::TimeRecorder>();
   loadExtension<cse::extensions::KeyStatsRecorder>();
-  loadExtension<cse::extensions::RecordedCommands>();
   loadExtension<cse::extensions::ColorPicker>();
   loadExtension<cse::extensions::Tables>();
   loadExtension<cse::extensions::GotoDir>();
@@ -51,8 +49,10 @@ static void loadDefaultExtensions()
     "reload extensions",
     { /* no parameters */ },
     [](const auto &parts) {
-      cse::log("Reloading extensions");
-      reloadExtensions();
+      cse::extensions::runLater([] {
+        cse::log("Reloading extensions");
+        reloadExtensions();
+      });
     }
   });
   
@@ -84,14 +84,6 @@ static void unloadExtensions()
 INT WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
                    _In_ PSTR lpCmdLine, _In_ INT nCmdShow)
 {
-  expressions::LexingContext lex{ "8+2*x<<2" };
-  expressions::ParsingContext parse{ expressions::lex(lex), lex.line };
-  auto exp = expressions::parse(parse);
-  expressions::EvaluationContext eval{};
-  eval.variables.emplace("x", 4);
-  auto x = exp->eval(eval);
-
-
   cse::graphics::loadGraphics();
   cse::keys::loadResources();
   loadDefaultExtensions();
@@ -101,6 +93,7 @@ INT WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
   while (!cse::graphics::shouldDispose()) {
     cse::graphics::render();
     cse::keys::pollEvents();
+    cse::extensions::runDelayedTasks();
   }
 
   // finalization

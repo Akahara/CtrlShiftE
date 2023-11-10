@@ -17,8 +17,6 @@ using Executor = std::function<void(const std::vector<std::string_view> &parts)>
 namespace cse {
 
 void log(std::string_view line);
-void logErr(std::string_view line);
-void logInfo(std::string_view line);
 
 void logm(auto &&...args)
 {

@@ -95,12 +95,23 @@ bool CommandSaveFilePart::isInFilenameCharset(std::string_view text)
 namespace cse::commands
 {
 
-static std::vector<Command> iotGenerators;
+static std::vector<Command> s_commands;
 
 void addCommand(Command &&command)
 {
   logm("Added command ", command.prefix);
-  iotGenerators.push_back(std::move(command));
+  s_commands.push_back(std::move(command));
+}
+
+bool hasCommand(const std::string &prefix)
+{
+  return std::ranges::any_of(s_commands, [&](const Command &cmd) { return cmd.prefix == prefix; });
+}
+
+void removeCommand(const std::string &prefix)
+{
+  if (std::erase_if(s_commands, [&](const Command &command) { return command.prefix == prefix; }))
+    logm("Removed command ", prefix);
 }
 
 bool executeCommand(const std::string &cmd)
@@ -119,8 +130,8 @@ bool executeCommand(const std::string &cmd)
   };
 
   if (!nextPart()) return false;
-  auto commandIt = std::ranges::find_if(iotGenerators, [&](const Command &command) { return command.prefix == part; });
-  if (commandIt == iotGenerators.end()) return false;
+  auto commandIt = std::ranges::find_if(s_commands, [&](const Command &command) { return command.prefix == part; });
+  if (commandIt == s_commands.end()) return false;
   Command &command = *commandIt;
   std::vector<std::string_view> arguments;
   for(auto &cmdpart : command.parts)
@@ -137,7 +148,7 @@ bool executeCommand(const std::string &cmd)
 
 std::vector<Command> &getCommands()
 {
-  return iotGenerators;
+  return s_commands;
 }
 
 }

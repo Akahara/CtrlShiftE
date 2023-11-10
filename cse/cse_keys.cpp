@@ -132,7 +132,7 @@ static void globalKeyListenerEntryPoint()
   MSG msg;
   while ((errorFlag = GetMessage(&msg, NULL, 0, 0)) != 0) {
     if (errorFlag == -1) {
-      cse::logErr("Received an invalid win32 message");
+      cse::log("Received an invalid win32 message");
     } else {
       TranslateMessage(&msg);
       DispatchMessage(&msg);

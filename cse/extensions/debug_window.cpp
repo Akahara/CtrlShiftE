@@ -41,7 +41,7 @@ void DebugWindowProcess::render()
 void DebugWindowProcess::log(std::string_view line)
 {
   if (s_logLines.size() > 1000) s_logLines.resize(500);
-  s_logLines.push_back(std::string(line));
+  s_logLines.emplace_back(line);
 }
 
 }

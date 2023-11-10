@@ -58,7 +58,7 @@ KeyListener::~KeyListener()
 
 void KeyListener::dumpRecordedEvents()
 {
-  cse::logInfo("Dumping global key events");
+  cse::log("Dumping global key events");
   std::ofstream sessionFile{ m_sessionFilePath, std::ios::binary };
 
   sessionFile << "v3;\n";

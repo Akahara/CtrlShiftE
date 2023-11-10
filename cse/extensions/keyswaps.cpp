@@ -107,9 +107,9 @@ void KeysUtilityWindow::render()
     }
     ImGui::TableNextRow();
     ImGui::TableSetColumnIndex(0);
-    ImGui::Text("%d", stroke.scanCode);
+    ImGui::Text("%d 0x%X", stroke.scanCode, stroke.scanCode);
     ImGui::TableSetColumnIndex(1);
-    ImGui::Text("%d", stroke.keyCode);
+    ImGui::Text("%d 0x%X", stroke.keyCode, stroke.keyCode);
     ImGui::TableSetColumnIndex(2);
     ImGui::TextUnformatted(m_keynames[stroke.scanCode].data());
   }
