@@ -34,7 +34,7 @@ TimeRecorder::~TimeRecorder()
 const char *TimeRecorder::formatDuration(const time_point &from, const time_point &to)
 {
   static char formatted[50];
-  int seconds = static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(from - to).count());
+  int seconds = static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(to - from).count());
   int secs    = seconds % 60;
   int minutes = seconds / 60 % 60;
   int hours   = seconds / 60 / 60;

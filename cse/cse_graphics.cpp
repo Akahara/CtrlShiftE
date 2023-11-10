@@ -122,13 +122,13 @@ void loadGraphics()
   cw.hCursor = NULL;
   cw.hbrBackground = NULL;
   cw.lpszMenuName = NULL;
-  cw.lpszClassName = L"CtrlShiftE_Class";
+  cw.lpszClassName = "CtrlShiftE_Class";
   cw.hIconSm = NULL;
   RegisterClassEx(&cw);
 
   g_mainWindow.wnd = CreateWindow(
     cw.lpszClassName,
-    L"CtrlShiftE",
+    "CtrlShiftE",
     WS_OVERLAPPEDWINDOW,
     0, 0, 1, 100,
     NULL,
