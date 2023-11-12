@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include <Windows.h>
 
 namespace cse::extensions {
 
@@ -48,10 +49,12 @@ GotoDir::GotoDir()
 {
   loadDirPaths();
 
+  m_directoryNameInput = std::make_shared<CommandEnumPart>("dirname", m_dirnames);
+  
   cse::commands::addCommand({
     "cd",
     "open a directory shortcut",
-    { m_directoryNameInput = std::make_shared<CommandEnumPart>("dirname", m_dirnames) },
+    { m_directoryNameInput },
     [this](const auto &args) {
       auto idx = std::find(m_dirnames.begin(), m_dirnames.end(), args[0]);
       assert(idx != m_dirnames.end());
@@ -59,6 +62,21 @@ GotoDir::GotoDir()
       if (fs::is_regular_file(path))
         path = path.parent_path();
       cse::extensions::openFileDir(path.string().c_str());
+    }
+  });
+  
+  cse::commands::addCommand({
+    "cmd",
+    "open a shell shortcut",
+    { m_directoryNameInput },
+    [this](const auto &args) {
+      auto idx = std::find(m_dirnames.begin(), m_dirnames.end(), args[0]);
+      assert(idx != m_dirnames.end());
+      fs::path path = m_dirpaths[idx - m_dirnames.begin()];
+      if (fs::is_regular_file(path))
+        path = path.parent_path();
+      if (!ShellExecuteA(NULL, "open", "cmd.exe", NULL, path.string().c_str(), SW_SHOWNORMAL))
+        cse::logm("Could not open a shell at ", path);
     }
   });
 

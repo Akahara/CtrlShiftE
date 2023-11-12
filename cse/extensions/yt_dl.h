@@ -48,8 +48,7 @@ public:
 private:
 
   YtDl *m_sharedExtension;
-  //char m_urlBuf[100] = "\0";
-  char m_urlBuf[100] = "https://www.youtube.com/watch?v=qkLOhd6iwVA";
+  char m_urlBuf[100] = "\0";
   YtDl::downloadtype_t m_downloadType = YtDl::DOWNLOAD_TYPE_VIDEO;
   size_t m_previousLogLinesCount = 0;
 };
