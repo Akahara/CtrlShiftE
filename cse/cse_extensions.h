@@ -16,6 +16,7 @@ public:
   CSEExtension(CSEExtension &&) = delete;
   CSEExtension &operator=(CSEExtension &&) = delete;
 
+  virtual void update() {}
   virtual void reload() {}
 };
 
@@ -26,13 +27,16 @@ namespace cse::extensions
 const fs::path &getUserFilesPath();
 fs::path getUserConfigFilePath(const char *fileName, const char *defaultFileContents);
 
-
 // run in between frames, when no extensions are active, to avoid stalling the main thread during display (still synchronous, use with care)
 void runLater(std::function<void()> &&executor);
 // run in separate thread to avoid stalling the main thread until the command starts
 void runDetached(std::function<void()> &&call);
 
 #ifdef CSE_EXPOSE_INTERNALS
+void loadDefaultExtensions();
+void runLoopUpdates();
+void unloadExtensions();
+
 void runDelayedTasks();
 #endif
 

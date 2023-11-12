@@ -18,10 +18,7 @@ void DebugWindowProcess::render()
   ImGui::Checkbox("Autoscroll", &m_autoScroll);
 
   constexpr ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersV;
-
-  ImVec2 outer_size = ImVec2(0.0f, 0.f);
-  if (ImGui::BeginTable("Logs", 1, flags, outer_size)) {
-
+  if (ImGui::BeginTable("Logs", 1, flags, { 0.f, 0.f })) {
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Logs", ImGuiTableColumnFlags_NoHeaderLabel);
     ImGui::TableHeadersRow();

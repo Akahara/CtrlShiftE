@@ -111,8 +111,7 @@ void loadGraphics()
 {
   // create a hidden main window
   // (necessary for ImGui, but never actually used)
-  WNDCLASSEX cw;
-  cw.cbSize = sizeof(WNDCLASSEX);
+  WNDCLASSA cw;
   cw.style = CS_CLASSDC;
   cw.lpfnWndProc = WndProc;
   cw.cbClsExtra = 0L;
@@ -123,10 +122,9 @@ void loadGraphics()
   cw.hbrBackground = NULL;
   cw.lpszMenuName = NULL;
   cw.lpszClassName = "CtrlShiftE_Class";
-  cw.hIconSm = NULL;
-  RegisterClassEx(&cw);
+  RegisterClassA(&cw);
 
-  g_mainWindow.wnd = CreateWindow(
+  g_mainWindow.wnd = CreateWindowA(
     cw.lpszClassName,
     "CtrlShiftE",
     WS_OVERLAPPEDWINDOW,
@@ -230,6 +228,12 @@ void render()
 bool shouldDispose()
 {
   return activeWindows.empty();
+}
+
+std::shared_ptr<WindowProcess> getWindow(const std::string &title)
+{
+  auto win = std::ranges::find_if(activeWindows, [&](const Window &win) { return win.process->getName() == title; });
+  return win == activeWindows.end() ? nullptr : win->process;
 }
 
 void createWindow(const std::shared_ptr<WindowProcess> &process)

@@ -89,7 +89,7 @@ void ColorsSchemesWindow::render()
   if (ImGui::Button("rgb($R,$G,$B)")) strcpy_s(m_userFormat, "rgb($R,$G,$B)");
 
   if (ImGui::CollapsingHeader("D3 Color schemes (click to copy)", ImGuiTreeNodeFlags_DefaultOpen)) {
-    for (int i = 0, s = 0; i < std::size(D3_COLOR_SCHEMES); s++) {
+    for (int i = 0, s = 0; i < static_cast<int>(std::size(D3_COLOR_SCHEMES)); s++) {
       ImGui::PushID(i);
       drawColorScheme(&D3_COLOR_SCHEMES[i]);
       if (s % 2 == 0 && s < 12) ImGui::SameLine();

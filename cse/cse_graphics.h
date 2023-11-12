@@ -37,6 +37,7 @@ void closeAllWindows();
 void render();
 bool shouldDispose();
 
+std::shared_ptr<WindowProcess> getWindow(const std::string &title);
 void createWindow(const std::shared_ptr<WindowProcess> &process);
 
 void prepareAlwaysOnTop();
