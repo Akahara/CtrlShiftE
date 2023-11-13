@@ -133,6 +133,8 @@ bool RecordsWindow::beginWindow()
 
 void RecordsWindow::render()
 {
+  bool isAnyPlaying = std::ranges::any_of(m_records, [](auto r) { return r.active; });
+
   ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.f);
   for (PlayingRecord &pr : m_records) {
     ImGui::PushStyleColor(ImGuiCol_Button, pr.active ? m_activeButtonColor : m_basicButtonColor);
@@ -157,6 +159,7 @@ void RecordsWindow::render()
     updatedRecord->active = m_recorder->toggleRecording(record);
     std::ranges::fill(m_newRecordName, '\0');
   }
+  if (!isAnyPlaying) ImGui::BeginDisabled();
   ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(117, 184, 83, 255));
   if (ImGui::Button("+1h"   )) addFixedTimeToActiveRecords(1h);    ImGui::SameLine(0,4);
   if (ImGui::Button("+30min")) addFixedTimeToActiveRecords(30min); ImGui::SameLine(0,4);
@@ -165,6 +168,7 @@ void RecordsWindow::render()
   if (ImGui::Button("-30min")) addFixedTimeToActiveRecords(-30min); ImGui::SameLine(0,4);
   if (ImGui::Button("-15min")) addFixedTimeToActiveRecords(-15min); ImGui::SameLine(0,4);
   ImGui::PopStyleColor(2);
+  if (!isAnyPlaying) ImGui::EndDisabled();
 }
 
 void RecordsWindow::addFixedTimeToActiveRecords(const TimeRecorder::clock::duration &fixedDuration) const

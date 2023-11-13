@@ -78,12 +78,12 @@ void executeShellCommand(const std::string &command, bool interactive/*=false*/)
   std::string file;
   std::string params;
   if(command[0] == '"') {
-    size_t split = command.find('"');
+    size_t split = command.find('"', 1);
     if(split == std::string::npos) {
       logm("Invalid shell command: ", command);
       return;
     }
-    file = command.substr(1, split);
+    file = command.substr(1, split-1);
     split++;
     while (split < command.size() && command[split] == ' ')
       split++;
