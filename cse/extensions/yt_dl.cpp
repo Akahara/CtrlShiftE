@@ -81,10 +81,10 @@ void YtDl::runYtDlProcess(const std::string &url, downloadtype_t downloadType)
 {
   std::stringstream fullCommand;
   fullCommand
-    << "cmd.exe /c \""
-    << " \"\"" << m_ytdlPath.string() << "\"\""
-    << " \"\"" << url << "\"\""
-    << " -o \"\"" << (m_downloadPath / "%(uploader)s_%(title)s.%(ext)s").string() << "\"\""
+    << "cmd.exe /s /c \""
+    << " \"" << m_ytdlPath.string() << "\""
+    << " \"" << url << "\""
+    << " -o %(uploader)s_%(title)s.%(ext)s"
     << (downloadType == DOWNLOAD_TYPE_MUSIC ? " --write-thumbnail -f bestaudio" : "")
     << "\"";
   std::string fullCommandString = fullCommand.str();
@@ -109,7 +109,7 @@ void YtDl::runYtDlProcess(const std::string &url, downloadtype_t downloadType)
   PROCESS_INFORMATION procInf{};
   if (!CreateProcessA(
     NULL, fullCommandCString.get(), NULL, NULL,
-    TRUE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, NULL,
+    TRUE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, m_downloadPath.string().c_str(),
     &startInf, &procInf))
   {
     CloseHandle(pipeWriteEnd);
