@@ -4,7 +4,6 @@
 #include "cse_commands.h"
 #undef CSE_EXPOSE_INTERNALS
 
-#include "extensions/debug_window.h"
 #include "extensions/key_stats_recorder.h"
 #include "extensions/time_recorder.h"
 #include "extensions/universal_shortcut.h"
@@ -13,6 +12,7 @@
 #include "extensions/gotodir.h"
 #include "extensions/keyswaps.h"
 #include "extensions/numbers.h"
+#include "extensions/regex.h"
 #include "extensions/yt_dl.h"
 #include "extensions/startup_commands.h"
 #include "extensions/expressions/expressions.h"
@@ -45,6 +45,7 @@ void loadDefaultExtensions()
   loadExtension<cse::extensions::KeySwaps>();
   loadExtension<cse::extensions::Numbers>();
   loadExtension<cse::extensions::YtDl>();
+  loadExtension<cse::extensions::Regex>();
   loadExtension<cse::extensions::StartupCommands>();
 
   cse::commands::addCommand({

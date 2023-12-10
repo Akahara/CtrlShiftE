@@ -8,13 +8,14 @@
 #include <tchar.h>
 #include <dwmapi.h>
 
-#include "../imgui/imgui.h"
-#include "../imgui/imgui_impl_dx9.h"
-#include "../imgui/imgui_impl_win32.h"
-#include "../imgui/imgui_internal.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_dx9.h"
+#include "imgui/imgui_impl_win32.h"
+#include "imgui/imgui_internal.h"
 
 #include "cse_extensions.h"
 #include "cse_utils.h"
+#include "res/fonts.h"
 
 struct {
   HWND                  wnd;
@@ -156,6 +157,10 @@ void loadGraphics()
   style.WindowPadding.x = 0;
   style.WindowPadding.y = 0;
   style.WindowRounding = 0.0f;
+
+  ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(fonts::DefaultFont, std::size(fonts::DefaultFont) * 4, 16);
+  io.FontDefault = font;
+  io.Fonts->Build();
 
   ImGui_ImplWin32_Init(g_mainWindow.wnd);
   ImGui_ImplDX9_Init(g_mainWindow.pd3dDevice);

@@ -1,6 +1,9 @@
 ﻿#pragma once
 
 #include "cse_utils.h"
+#include "json/json.hpp"
+
+using json = nlohmann::json;
 
 /*
  * CSE extensions are instanciated after core functions and are destroyed before them.
@@ -26,6 +29,8 @@ namespace cse::extensions
 
 const fs::path &getUserFilesPath();
 fs::path getUserConfigFilePath(const char *fileName, const char *defaultFileContents);
+json getUserGlobalConfig(const char *configName);
+void updateUserGlobalConfig(const char *configName, json config);
 
 // run in between frames, when no extensions are active, to avoid stalling the main thread during display (still synchronous, use with care)
 void runLater(std::function<void()> &&executor);

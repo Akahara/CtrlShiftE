@@ -8,6 +8,7 @@
 namespace cse::extensions {
 
 static const fs::path USER_FILES_DIR = ".CtrlShiftE";
+static const char *GLOBAL_CONFIG_FILE = "cse_config.json";
 static std::vector<std::function<void()>> s_delayedTasks;
 
 const fs::path &getUserFilesPath()
@@ -35,6 +36,24 @@ fs::path getUserConfigFilePath(const char *fileName, const char *defaultFileCont
     file << defaultFileContents << std::endl;
   }
   return path;
+}
+
+static fs::path getGlobalConfigFile() 
+{
+  return getUserConfigFilePath("cse_config.json", "{}");
+}
+
+json getUserGlobalConfig(const char *configName)
+{
+  return json::parse(std::ifstream{ getGlobalConfigFile() }).value(configName, json::object());
+}
+
+void updateUserGlobalConfig(const char *configName, json config)
+{
+  // FUTURE add debouncing if this prooves to be too much
+  json globalConfig = json::parse(std::ifstream{ getGlobalConfigFile() });
+  globalConfig.merge_patch({{ configName, std::move(config) }});
+  std::ofstream{ getGlobalConfigFile() } << std::setw(2) << globalConfig;
 }
 
 void runLater(std::function<void()> &&executor)

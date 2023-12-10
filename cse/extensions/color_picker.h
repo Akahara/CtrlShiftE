@@ -7,6 +7,10 @@
 
 namespace cse::extensions {
 
+struct color_t {
+  float r, g, b, a;
+};
+
 class ColorPicker : public CSEExtension {
 public:
   static constexpr const char *EXTENSION_NAME = "Color Picker";
@@ -16,6 +20,8 @@ public:
 
 class ColorPickerWindow : public WindowProcess {
 public:
+  static constexpr int CAPTURE_WIDTH = 5, CAPTURE_HEIGHT = 5;
+
   ColorPickerWindow();
   ~ColorPickerWindow() override;
 
@@ -26,9 +32,7 @@ private:
 
   static void copiableColorText(const char *formatID, const char *text);
 
-  static constexpr int CAPTURE_WIDTH = 5, CAPTURE_HEIGHT = 5;
-
-  float      m_color[4];
+  color_t    m_color;
   char       m_rgbText[40];
   char       m_rgbIntText[40];
   char       m_hexText[10];

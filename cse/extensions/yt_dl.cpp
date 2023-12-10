@@ -128,7 +128,7 @@ void YtDl::runYtDlProcess(const std::string &url, downloadtype_t downloadType)
 
     CHAR chBuf[4096];
     DWORD readCount;
-    while (ReadFile(pipeReadEnd, chBuf, std::size(chBuf), &readCount, NULL) && readCount > 0) {
+    while (ReadFile(pipeReadEnd, chBuf, (DWORD)std::size(chBuf), &readCount, NULL) && readCount > 0) {
       std::lock_guard _guard{ m_logsMutex };
       m_logs.emplace_back(chBuf, readCount);
     }

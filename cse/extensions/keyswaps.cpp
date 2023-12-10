@@ -1,8 +1,8 @@
 #include "keyswaps.h"
 
-#include "color_picker.h"
+#include <Windows.h>
+
 #include "universal_shortcut.h"
-#include "../../imgui/imgui_internal.h"
 
 namespace cse::extensions
 {
@@ -90,7 +90,7 @@ KeysUtilityWindow::KeysUtilityWindow(const std::unordered_set<ActiveKeyStroke, A
 
 void KeysUtilityWindow::render()
 {
-  ImGui::BeginTable("", 3);
+  ImGui::BeginTable("###keys", 3);
   auto column = [](const char *text) { ImGui::TableSetupColumn(text, ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize(text).x); };
   column("ScanCode");
   column("KeyCode");

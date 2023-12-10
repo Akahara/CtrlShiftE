@@ -3,7 +3,8 @@
 #include <memory>
 #include <string>
 
-#include "../imgui/imgui.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_stdlib.h"
 
 class WindowProcess {
 protected:
