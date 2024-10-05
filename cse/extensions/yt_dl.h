@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <unordered_set>
+#include <mutex>
 
 #include "cse_extensions.h"
 #include "cse_graphics.h"

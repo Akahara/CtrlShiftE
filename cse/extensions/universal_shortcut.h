@@ -12,7 +12,7 @@ public:
 
 class UniversalShortcutWindow : public WindowProcess {
 public:
-  UniversalShortcutWindow();
+  UniversalShortcutWindow(bool noExit=false);
   bool beginWindow() override;
   void render() override;
 
@@ -26,11 +26,12 @@ private:
   char                           m_currentInput[MAX_INPUT_SIZE + 1];
   int                            m_displayFrame;
   size_t                         m_selectedCompletionIndex;
-  Command *m_currentCommand;
+  Command                       *m_currentCommand;
   std::vector<CommandCompletion> m_currentCompletions;
   std::vector<std::string_view>  m_currentInputParts;
   std::vector<bool>              m_currentInputPartsValidState;
   bool                           m_alreadyPrompted = false;
+  bool                           m_neverCloseWindow;
   struct {
     int position = 0;
     int selectionStart = 0;

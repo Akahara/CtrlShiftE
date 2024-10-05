@@ -252,7 +252,7 @@ void createWindow(const std::shared_ptr<WindowProcess> &process)
 
 void closeAllWindows()
 {
-  std::ranges::for_each(activeWindows, [](Window &win) { win.process->setVisible(false); }); // FIX is that necessary ?
+  std::ranges::for_each(activeWindows, [](Window &win) { win.process->setVisible(false); });
   activeWindows.clear();
 }
 

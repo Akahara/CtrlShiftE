@@ -3,6 +3,7 @@
 #undef CSE_EXPOSE_INTERNALS
 
 #include <fstream>
+#include <thread>
 #include <Windows.h>
 
 namespace cse::extensions {

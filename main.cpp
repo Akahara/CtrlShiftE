@@ -7,28 +7,38 @@
 #include "cse.h"
 
 #include "extensions/debug_window.h"
+#include "extensions/universal_shortcut.h"
 
 INT WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
                    _In_ PSTR lpCmdLine, _In_ INT nCmdShow)
 {
+  std::string argv{ lpCmdLine };
+  bool noKeys = argv.contains("--no-keys");
+
+  std::filesystem::current_path(cse::extensions::getUserFilesPath());
+
   // initialization
   cse::graphics::loadGraphics();
   cse::keys::loadResources();
   cse::extensions::loadDefaultExtensions();
-  cse::keys::registerGlobalHook();
   cse::graphics::createWindow(std::make_shared<cse::extensions::DebugWindowProcess>());
+  if (!noKeys) {
+    cse::keys::registerGlobalHook();
+  } else {
+    cse::graphics::createWindow(std::make_shared<cse::extensions::UniversalShortcutWindow>(true));
+  }
 
   // main loop
   while (!cse::graphics::shouldDispose()) {
     cse::graphics::render();
-    cse::keys::pollEvents();
+    if (!noKeys) cse::keys::pollEvents();
     cse::extensions::runLoopUpdates();
     cse::extensions::runDelayedTasks();
   }
 
   // finalization
   cse::extensions::unloadExtensions();
-  cse::keys::disposeHookAndResources();
+  if (!noKeys) cse::keys::disposeHookAndResources();
   cse::graphics::destroyGraphics();
 
   return 0;

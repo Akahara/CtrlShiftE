@@ -59,6 +59,8 @@ size_t TimeRecorder::getActiveRecordIndex(const std::string &recordName) const
 std::ofstream TimeRecorder::openRecordFile(const std::string &recordName)
 {
   fs::path recordFilePath = getRecordsPath();
+  if (!fs::is_directory(recordFilePath))
+    fs::create_directories(recordFilePath);
   recordFilePath /= recordName;
   recordFilePath += ".txt";
   std::ofstream recordFile{ recordFilePath, std::ios_base::app };
@@ -113,9 +115,16 @@ void TimeRecorder::saveRecord(const std::string &recordName, const time_point &b
     << std::endl;
 }
 
-RecordsWindow::RecordsWindow(TimeRecorder *recorder) : WindowProcess("Recordings"), m_recorder(recorder)
+RecordsWindow::RecordsWindow(TimeRecorder *recorder)
+  : WindowProcess("Recordings")
+  , m_recorder(recorder)
 {
-  for (const auto &entry : fs::directory_iterator(TimeRecorder::getRecordsPath())) {
+  fs::path recordsPath = TimeRecorder::getRecordsPath();
+  if (!fs::is_directory(recordsPath)) {
+    fs::create_directories(recordsPath);
+    return;
+  }
+  for (const auto &entry : fs::directory_iterator(recordsPath)) {
     std::string record = entry.path().stem().string();
     bool isRecordActive = m_recorder->getActiveRecordIndex(record) != -1;
     m_records.push_back({ record, isRecordActive });

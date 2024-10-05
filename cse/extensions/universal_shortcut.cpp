@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-#include "../../imgui/imgui_internal.h"
+#include "imgui/imgui_internal.h"
 
 namespace cse::extensions
 {
@@ -20,11 +20,12 @@ void UniversalShortcutBringer::onButtonPressed(const GlobalButtonEvent &ev)
 {
 }
 
-UniversalShortcutWindow::UniversalShortcutWindow()
+UniversalShortcutWindow::UniversalShortcutWindow(bool noExit)
   : WindowProcess("CtrlShiftE")
   , m_displayFrame(0)
   , m_selectedCompletionIndex(-1)
   , m_currentInput("")
+  , m_neverCloseWindow(noExit)
 {
   updateCompletions();
 }
@@ -35,7 +36,7 @@ bool UniversalShortcutWindow::beginWindow()
     return false;
   ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiViewportFlags_NoTaskBarIcon | ImGuiWindowFlags_NoBackground;
   ImGui::SetNextWindowSize({ 400, 200 });
-  return ImGui::Begin(m_windowName.c_str(), &m_isVisible, flags);
+  return ImGui::Begin(m_windowName.c_str(), nullptr, flags);
 }
 
 void UniversalShortcutWindow::render()
@@ -46,7 +47,7 @@ void UniversalShortcutWindow::render()
     ImGui::SetWindowFocus();
 
   // if focus is lost, close this window
-  } else if (m_displayFrame > 3) {
+  } else if (m_displayFrame > 3 && !m_neverCloseWindow) {
     bool hasFocus = ImGui::GetCurrentContext()->PlatformIO.Platform_GetWindowFocus(ImGui::GetCurrentContext()->CurrentViewport);
     if (!hasFocus) {
       m_isVisible = false;
@@ -132,13 +133,13 @@ void UniversalShortcutWindow::render()
 
   // on <enter>, run the active command and close this window
   if (ImGui::IsKeyPressed(ImGuiKey_Enter)) {
-    if(runSelectedCommand())
+    bool isValidCommand = runSelectedCommand();
+    if (isValidCommand && !m_neverCloseWindow)
       setVisible(false);
   }
   // on <esc>, close this window
-  if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+  if (!m_neverCloseWindow && ImGui::IsKeyPressed(ImGuiKey_Escape))
     setVisible(false);
-
 }
 
 int UniversalShortcutWindow::onSpecialKey(ImGuiInputTextCallbackData *data)

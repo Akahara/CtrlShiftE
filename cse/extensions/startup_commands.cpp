@@ -51,9 +51,9 @@ fs::path StartupCommands::getConfigFile()
     "# You can put commands here, pass flags to dictate when and how the\n"
     "# commands will be executed (see the examples and the app code to see\n"
     "# exactly what's possible)\n"
-    "[type=cse] time window\n"
+    "[type=cse] [startup] time window\n"
     "[type=shell] [command=python] [command-tooltip=python shell] [shell-interactive] C:\\Windows\\System32\\cmd.exe /c python\n"
-    "[type=url] [command=regex] [command-tooltip=Regex101 substitution and matching] https://regex101.com/\n");
+    "[type=url] [command=excalidraw] [command-tooltip=web-explorer drawing tool] https://excalidraw.com/\n");
 }
 
 StartupCommands::FileCommands StartupCommands::readCommandsFromFile(const fs::path& path)
