@@ -18,9 +18,10 @@ public:
 class RegexWindow : public WindowProcess
 {
 public:
-  RegexWindow();
+  RegexWindow(fs::path saveFile);
   ~RegexWindow() override;
 
+  bool beginWindow() override;
   void render() override;
 
 private:
@@ -32,6 +33,7 @@ private:
   static char unescapeBackslashCharacter(char c);
 
 private:
+  fs::path m_saveFile;
   std::string m_regexInput;
   std::string m_textInput;
   std::string m_textOutput;

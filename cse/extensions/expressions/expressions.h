@@ -6,6 +6,7 @@
 #include <variant>
 #include <string>
 #include <unordered_map>
+#include <functional>
 
 namespace expressions
 {
@@ -21,6 +22,8 @@ enum TokenType {
   TK_SPACE,
 
   VAR_NUMBER, VAR_VARIABLE,
+  BUILTIN_FUNCTION,
+  BUILTIN_CONSTANT,
 
   TK_PAREN_OPEN, TK_PAREN_CLOSE,
   TK_ADD, TK_SUBTRACT, TK_MULTIPLY, TK_DIVIDE,
@@ -49,7 +52,7 @@ using Operator = operators::Operator;
 struct EvaluationContext
 {
   std::optional<std::string> evaluationError;
-  std::unordered_map<std::string, std::variant<eval_type, inteval_type>> variables;
+  std::unordered_map<std::string, std::pair<eval_type, inteval_type>> variables;
 };
 
 struct Expression
@@ -104,6 +107,18 @@ struct BinaryOpExp : Expression {
   inteval_type evalInt(EvaluationContext &context) const override;
 };
 
+struct FunctionCallExp : Expression {
+
+  FunctionCallExp(std::function<eval_type(eval_type)> &&function, std::unique_ptr<Expression>&& operand)
+    : function(std::move(function)), operand(std::move(operand)) {}
+
+  std::function<eval_type(eval_type)> function;
+  std::unique_ptr<Expression> operand;
+
+  eval_type eval(EvaluationContext& context) const override { return function(operand->eval(context)); }
+  inteval_type evalInt(EvaluationContext& context) const override { return static_cast<inteval_type>(function(static_cast<eval_type>(operand->evalInt(context)))); }
+};
+
 struct Token
 {
   size_t begin, end;
@@ -149,7 +164,7 @@ Section getVisibleSection(ParsingContext &context);
 std::unique_ptr<Expression> parse(ParsingContext &context, const Section &section);
 std::unique_ptr<Expression> parseOperationExpression(ParsingContext &context, const Section &section);
 
-inline eval_type eval(EvaluationContext &context, const Expression &exp) { return exp.eval(context); }
+inline eval_type evalFloat(EvaluationContext &context, const Expression &exp) { return exp.eval(context); }
 inline inteval_type evalInt(EvaluationContext &context, const Expression &exp) { return exp.evalInt(context); }
 
 }

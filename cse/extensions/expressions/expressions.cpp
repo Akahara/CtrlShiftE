@@ -2,6 +2,7 @@
 
 #include <stack>
 #include <stdexcept>
+#include <numbers>
 
 namespace expressions
 {
@@ -60,6 +61,20 @@ static constexpr std::pair<TokenType, const char *> TOKEN_TEXTS[] = {
   { TokenType::TK_LOGICAL_AND,  "&"  },
   { TokenType::TK_LOGICAL_OR,   "|"  },
 };
+static std::unordered_map<std::string, std::function<eval_type(eval_type)>> BUILTIN_FUNCTIONS{
+  { "exp", [](eval_type x) { return std::exp(x); } },
+  { "sqrt", [](eval_type x) { return std::sqrt(x); } },
+  { "sin", [](eval_type x) { return std::sin(x); } },
+  { "cos", [](eval_type x) { return std::cos(x); } },
+  { "tan", [](eval_type x) { return std::tan(x); } },
+  { "asin", [](eval_type x) { return std::asin(x); } },
+  { "acos", [](eval_type x) { return std::acos(x); } },
+  { "atan", [](eval_type x) { return std::atan(x); } },
+};
+static std::unordered_map<std::string, eval_type> BUILTIN_CONSTANTS{
+  { "pi", std::numbers::pi_v<eval_type> },
+  { "e", std::numbers::e_v<eval_type> },
+};
 
 static constexpr SectionToken SECTION_TOKENS[] = {
   SectionToken{ TokenType::TK_PAREN_OPEN, TokenType::TK_PAREN_CLOSE }
@@ -68,7 +83,7 @@ static constexpr SectionToken SECTION_TOKENS[] = {
 eval_type VarExp::eval(EvaluationContext &context) const
 {
   if (context.variables.contains(variableName))
-    return std::visit([](auto x) { return static_cast<eval_type>(x); }, context.variables[variableName]);
+    return context.variables[variableName].first;
   context.evaluationError = "Unbound variable: " + variableName;
   return 0;
 }
@@ -76,7 +91,7 @@ eval_type VarExp::eval(EvaluationContext &context) const
 inteval_type VarExp::evalInt(EvaluationContext &context) const
 {
   if (context.variables.contains(variableName))
-    return std::visit([](auto x) { return static_cast<inteval_type>(x); }, context.variables[variableName]);
+    return context.variables[variableName].second;
   context.evaluationError = "Unbound variable: " + variableName;
   return 0;
 }
@@ -253,9 +268,11 @@ std::pair<eval_type, inteval_type> parseNumber(ParsingContext &context, const st
     }
   }
 
+  std::string zeroPrepend;
+  const std::string& floatString = string[0] == '.' ? (zeroPrepend = "0"+string) : string;
   size_t s;
-  eval_type e = std::stod(string, &s);
-  if(s != string.size()) {
+  eval_type e = std::stod(floatString, &s);
+  if(s != floatString.size()) {
     context.parsingError = "Invalid string literal: " + string;
     return {};
   }
@@ -286,8 +303,26 @@ std::unique_ptr<Expression> parse(ParsingContext& context, const Section& sectio
       if (context.parsingError) return nullptr;
       return std::make_unique<NumberExp>(num, intNum);
     }
+    if (tk.type == TokenType::BUILTIN_CONSTANT) {
+      eval_type value = BUILTIN_CONSTANTS[context.getText(tk)];
+      return std::make_unique<NumberExp>(value, static_cast<inteval_type>(value));
+    }
     context.parsingError = "Unknown literal";
     return nullptr;
+  }
+
+  // parse function calls
+  if (section.subsections.size() == 1
+    && section.subsections.front().start == section.start + 2
+    && section.subsections.front().stop == section.stop - 1
+    && context.tokens[section.start].type == TokenType::BUILTIN_FUNCTION) {
+    const Token& tk = context.tokens[section.start];
+    return std::make_unique<FunctionCallExp>(std::function(BUILTIN_FUNCTIONS[context.getText(tk)]), parse(context, section.subsections.front()));
+  }
+  if (section.subsections.size() == 0
+    && context.tokens[section.start].type == TokenType::BUILTIN_FUNCTION) {
+    const Token& tk = context.tokens[section.start];
+    return std::make_unique<FunctionCallExp>(std::function(BUILTIN_FUNCTIONS[context.getText(tk)]), parse(context, section.getSubSection(section.start+1, section.stop)));
   }
 
   // parse operation
@@ -325,11 +360,13 @@ std::unique_ptr<Expression> parseOperationExpression(ParsingContext& context, co
 
 TokenType readNonSectionToken(LexingContext& context, size_t begin, size_t end)
 {
-  std::string_view text{ context.line.c_str() + begin, end-begin };
+  std::string text = context.line.substr(begin, end - begin);
 
-  //if (std::ranges::all_of(text, [](char c) { return (c >= '0' && c <= '9') || c == '.'; }))
-  //  return TokenType::VAR_NUMBER;
-  if (text[0] >= '0' && text[0] <= '9')
+  if (BUILTIN_CONSTANTS.contains(text))
+    return TokenType::BUILTIN_CONSTANT;
+  if (BUILTIN_FUNCTIONS.contains(text))
+    return TokenType::BUILTIN_FUNCTION;
+  if ((text[0] >= '0' && text[0] <= '9') || text[0] == '.')
     return TokenType::VAR_NUMBER;
   if (std::ranges::all_of(text, [](char c) { return true; }))
     return TokenType::VAR_VARIABLE;
@@ -340,7 +377,7 @@ TokenType readNonSectionToken(LexingContext& context, size_t begin, size_t end)
 std::pair<TokenType, size_t> getDelimiter(const LexingContext& context, size_t start)
 {
   if(context.line[start] == ' ') {
-    size_t stop = 1;
+    size_t stop = start + 1;
     while (stop < context.line.size() && context.line[stop] == ' ')
       stop++;
     return { TokenType::TK_SPACE, stop };
@@ -370,7 +407,8 @@ std::vector<Token> lex(LexingContext& context)
       if (context.lexingError) return {};
     }
 
-    tokens.emplace_back(i, stop, delimiter);
+    if (delimiter != TokenType::TK_SPACE)
+      tokens.emplace_back(i, stop, delimiter);
     i = stop;
     currentTokenBegin = i;
   }

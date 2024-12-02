@@ -202,7 +202,8 @@ void render()
   ImGui::NewFrame();
 
   // draw frame
-  for (Window &window : activeWindows) {
+  for (size_t i = 0; i < activeWindows.size(); i++) {
+    Window& window = activeWindows[i];
     if (window.process->isVisible()) {
       prepareAlwaysOnTop();
       bool visible = window.process->beginWindow();

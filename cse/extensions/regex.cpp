@@ -2,6 +2,7 @@
 
 #include <ranges>
 #include <regex>
+#include <fstream>
 
 #include "cse_commands.h"
 
@@ -9,38 +10,48 @@ namespace cse::extensions
 {
 Regex::Regex()
 {
+  fs::path saveFilesPath = cse::extensions::getUserFilesPath() / "regex";
   cse::commands::addCommand({
     "regex",
     "regex substitution & matching",
-    { /* no arguments */ },
-    [](auto &args) { cse::graphics::createWindow(std::make_shared<RegexWindow>()); }
+    { std::make_shared<CommandSaveFilePart>("name", saveFilesPath, true) },
+    [=](auto &args) { cse::graphics::createWindow(std::make_shared<RegexWindow>(saveFilesPath / args[0])); }
   });
 }
   
-RegexWindow::RegexWindow()
-  : WindowProcess("Regex")
+RegexWindow::RegexWindow(fs::path saveFile)
+  : WindowProcess("Regex " + saveFile.string())
+  , m_saveFile(std::move(saveFile))
 {
-  json previousSession = cse::extensions::getUserGlobalConfig("regex");
-  m_textInput = previousSession.value("input", "");
-  m_regexInput = previousSession.value("regex", "");
-  updateOutputNow(m_regexInput, m_textInput);
+  if (fs::exists(m_saveFile)) {
+    json restored = json::parse(std::ifstream{ m_saveFile });
+    m_textInput = restored.value("input", "");
+    m_regexInput = restored.value("regex", "");
+    updateOutputNow(m_regexInput, m_textInput);
+  }
 }
 
 RegexWindow::~RegexWindow()
 {
-  cse::extensions::updateUserGlobalConfig("regex", {
+  json saved{
     { "input", m_textInput },
     { "regex", m_regexInput },
-  });
+  };
+  std::ofstream{ m_saveFile } << std::setw(2) << saved;
+}
+
+bool RegexWindow::beginWindow()
+{
+  ImGui::SetNextWindowSize({ 500, 300 }, ImGuiCond_FirstUseEver);
+  return WindowProcess::beginWindow();
 }
 
 void RegexWindow::render()
 {
-  
-  ImGui::BeginChild("r", { -1,0 }, ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY);
+  ImGui::BeginChild("r", { -1,100 }, ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY);
   if (ImGui::InputTextMultiline("###r", &m_regexInput, { -1,-1 })) updateOutput(m_regexInput, m_textInput);
   ImGui::EndChild();
-  ImGui::BeginChild("i", { -1,0 }, ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY);
+  ImGui::BeginChild("i", { -1,100 }, ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY);
   if (ImGui::InputTextMultiline("###i", &m_textInput, { -1,-1 })) updateOutput(m_regexInput, m_textInput);
   ImGui::EndChild();
   {

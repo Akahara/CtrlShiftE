@@ -26,8 +26,9 @@ void NumbersWindow::render()
       ImGui::EndDisabled();
 
     int_type bitFlag = static_cast<int_type>(1) << (BIT_COUNT - 1 - i);
-    if (ImGui::Button(((m_value & bitFlag ? "1##" : "0##") + std::to_string(i)).c_str())) {
-      m_value ^= bitFlag;
+    if (ImGui::Button(((m_intValue & bitFlag ? "1##" : "0##") + std::to_string(i)).c_str())) {
+      m_intValue ^= bitFlag;
+      m_floatValue = static_cast<float_type>(m_intValue);
       updateTexts();
     }
 
@@ -51,18 +52,9 @@ void NumbersWindow::render()
   { parseAndEvalExpression(m_hexString); m_textFocus = 2; }
   if (ImGui::InputText("Binary", m_binString, sizeof(m_binString), ImGuiInputTextFlags_EnterReturnsTrue))
   { parseAndEvalExpression(m_binString); m_textFocus = 3; }
-  if (ImGui::InputText(m_enabledByteCount == 8 ? "Bits as double" : "Bits as float", m_floatString, sizeof(m_floatString),
-      ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsScientific)) {
-    if(m_enabledByteCount == 8) {
-      double x = std::stod(m_floatString);
-      m_value = std::bit_cast<int_type>(x);
-    } else {
-      float x = std::stof(m_floatString);
-      m_value = std::bit_cast<int32_t>(x);
-    }
-    updateTexts();
+  if (ImGui::InputText(m_enabledByteCount == 8 ? "Bits as double" : "Bits as float", m_floatString, sizeof(m_floatString), ImGuiInputTextFlags_EnterReturnsTrue)) {
+    parseAndEvalExpression(m_floatString, true); m_textFocus = 4;
   }
-  if (ImGui::IsItemHovered()) ImGui::SetTooltip("no evaluation, only literals");
 
   ImGui::TextColored({ 1,0,0,1 }, "%s", m_evalErrorString.c_str());
 
@@ -74,8 +66,8 @@ void NumbersWindow::render()
     ImGui::SameLine(0, 1.f);
   }
 
-  if (ImGui::Button("New Window"))
-    cse::graphics::createWindow(make_window());
+  //if (ImGui::Button("New Window"))
+  //  cse::graphics::createWindow(make_window());
   ImGui::SameLine();
   ImGui::PushStyleColor(ImGuiCol_Button, 0xff46d95c);
   ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xff46d95c);
@@ -86,13 +78,13 @@ void NumbersWindow::render()
     "When multiple windows are open, use #A,#B... to use their values");
 }
 
-NumbersWindow::int_type NumbersWindow::getValue() const
+NumbersWindow::int_type NumbersWindow::getValueAsInt() const
 {
   switch (m_enabledByteCount) {
-  case 1: return static_cast<int8_t >(m_value);
-  case 2: return static_cast<int16_t>(m_value);
-  case 4: return static_cast<int32_t>(m_value);
-  case 8: return static_cast<int64_t>(m_value);
+  case 1: return static_cast<int8_t >(m_intValue);
+  case 2: return static_cast<int16_t>(m_intValue);
+  case 4: return static_cast<int32_t>(m_intValue);
+  case 8: return static_cast<int64_t>(m_intValue);
   default: return 0; // unreachable
   }
 }
@@ -136,25 +128,22 @@ void NumbersWindow::updateTexts(smallint_type value, smallunsigned_type uvalue)
   copystr(m_hexString, ss.str()); ss.str("");
 
   // float
-  if (m_enabledByteCount == 8)
-    ss << std::bit_cast<double>(m_value);
-  else
-    ss << std::bit_cast<float>(static_cast<int32_t>(m_value));
+  ss << m_floatValue;
   copystr(m_floatString, ss.str()); ss.str("");
 }
 
 void NumbersWindow::updateTexts()
 {
   switch (m_enabledByteCount) {
-  case 1: updateTexts(static_cast<int>(static_cast<int8_t>(m_value)), static_cast<unsigned int>(static_cast<uint8_t>(m_value))); break;
-  case 2: updateTexts(static_cast<int16_t>(m_value), static_cast<uint16_t>(m_value)); break;
-  case 4: updateTexts(static_cast<int32_t>(m_value), static_cast<uint32_t>(m_value)); break;
-  case 8: updateTexts(static_cast<int64_t>(m_value), static_cast<uint64_t>(m_value)); break;
+  case 1: updateTexts(static_cast<int>(static_cast<int8_t>(m_intValue)), static_cast<unsigned int>(static_cast<uint8_t>(m_intValue))); break;
+  case 2: updateTexts(static_cast<int16_t>(m_intValue), static_cast<uint16_t>(m_intValue)); break;
+  case 4: updateTexts(static_cast<int32_t>(m_intValue), static_cast<uint32_t>(m_intValue)); break;
+  case 8: updateTexts(static_cast<int64_t>(m_intValue), static_cast<uint64_t>(m_intValue)); break;
   default: break;
   }
 }
 
-void NumbersWindow::parseAndEvalExpression(const std::string &expression)
+void NumbersWindow::parseAndEvalExpression(const std::string &expression, bool asFloat)
 {
   expressions::LexingContext lex{ expression };
   expressions::ParsingContext parse{ expressions::lex(lex), expression };
@@ -164,12 +153,25 @@ void NumbersWindow::parseAndEvalExpression(const std::string &expression)
   expressions::EvaluationContext eval{};
   std::ranges::for_each(s_allWindows, [&](auto &win) {
     if (auto p = win.lock(); p)
-      eval.variables.emplace(p->m_winVarName, p->getValue());
+      eval.variables.emplace(p->m_winVarName, std::pair{ p->m_floatValue, p->getValueAsInt() });
   });
-  int64_t val = evalInt(eval, *exp);
-  if (eval.evaluationError) { m_evalErrorString = eval.evaluationError.value(); return; }
+  if (asFloat) {
+    float_type val = evalFloat(eval, *exp);
+    if (eval.evaluationError) { m_evalErrorString = eval.evaluationError.value(); return; }
+    if (m_enabledByteCount == 8) {
+      m_floatValue = val;
+      m_intValue = static_cast<int_type>(val);
+    } else {
+      m_floatValue = static_cast<float>(val);
+      m_intValue = static_cast<int_type>(m_floatValue);
+    }
+  } else {
+    int_type val = evalInt(eval, *exp);
+    if (eval.evaluationError) { m_evalErrorString = eval.evaluationError.value(); return; }
+    m_intValue = val;
+    m_floatValue = static_cast<float_type>(val);
+  }
 
-  m_value = val;
   m_evalErrorString = "";
   updateTexts();
 }
